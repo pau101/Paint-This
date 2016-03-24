@@ -65,6 +65,7 @@ public class PaintingDrawable extends Painting {
 	public void assignUUID(UUID uuid) {
 		super.assignUUID(uuid);
 		Random random = new Random(uuid.hashCode());
+		getPaintTexture();
 		paintXOffset = random.nextInt(paintTextureWidth);
 		paintYOffset = random.nextInt(paintTextureHeight);
 	}
