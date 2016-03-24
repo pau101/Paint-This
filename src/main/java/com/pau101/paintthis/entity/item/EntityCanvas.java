@@ -381,7 +381,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	public void dropCanvas(EntityPlayer player) {
 		if (painting.getWidth() > 0 && painting.getHeight() > 0) {
 			ItemStack stack = painting.getAsItemStack(getItem().copy());
-			if (player != null && !(Util.containsItemStack(player.inventory, stack) && player.capabilities.isCreativeMode) && !player.inventory.addItemStackToInventory(stack)) {
+			if (player == null || !(Util.containsItemStack(player.inventory, stack) && player.capabilities.isCreativeMode) && !player.inventory.addItemStackToInventory(stack)) {
 				float fx = MathHelper.cos((rotationYaw + 90) * Mth.DEG_TO_RAD);
 				float fz = MathHelper.sin((rotationYaw + 90) * Mth.DEG_TO_RAD);
 				EnumFacing dir = EnumFacing.getFacingFromVector(fx, 0, fz);
