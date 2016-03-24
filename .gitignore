@@ -1,0 +1,28 @@
+# Development
+
+bin/
+minecraft/
+run/
+lib/
+dev/
+
+# Eclipse
+
+eclipse/
+build/
+.settings/
+.classpath
+.project
+*.launch
+
+# IntelliJ IDEA
+
+out/
+*.iml
+*.ipr
+*.iws
+
+# Gradle
+
+.gradle/
+gradle*

@@ -1,0 +1,14 @@
+[{
+	"modid": "paintthis",
+	"name": "Paint This!",
+	"description": "This mod allows player's to paint to their heart's content on canvases placed on easels or a wall and then frame their masterpieces.",
+	"version": "${version}",
+	"mcversion": "${mcversion}",
+	"url": "",
+	"updateUrl": "",
+	"authorList": [ "pau101" ],
+	"credits": "MannyInTheMix",
+	"logoFile": "",
+	"screenshots": [],
+	"useDependencyInformation": true
+}]

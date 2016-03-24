@@ -1,0 +1,55 @@
+{
+	"entity.easel.break": {
+		"category": "neutral",
+		"sounds":[
+			"entity/easel/break1",
+			"entity/easel/break2",
+			"entity/easel/break3",
+			"entity/easel/break4"
+		]
+	},
+	"entity.easel.fall": {
+		"category": "neutral",
+		"sounds": [
+			"minecraft:dig/wood1",
+			"minecraft:dig/wood2",
+			"minecraft:dig/wood3",
+			"minecraft:dig/wood4"
+		]
+	},
+	"entity.easel.hit": {
+		"category": "neutral",
+		"sounds": [
+			"entity/easel/hit1",
+			"entity/easel/hit2",
+			"entity/easel/hit3",
+			"entity/easel/hit4"
+		]
+	},
+	"entity.easel.place": {
+		"category": "neutral",
+		"sounds": [
+			"minecraft:dig/stone1",
+			"minecraft:dig/stone2",
+			"minecraft:dig/stone3",
+			"minecraft:dig/stone4"
+		]
+	},
+	"entity.canvas.break": {
+		"category": "neutral",
+		"sounds": [
+			"entity/canvas/break1",
+			"entity/canvas/break2",
+			"entity/canvas/break3"
+		]
+	},
+	"entity.canvas.place": {
+		"category": "neutral",
+		"sounds": [
+			"entity/canvas/place1",
+			"entity/canvas/place2",
+			"entity/canvas/place3",
+			"entity/canvas/place4"
+		]
+	}
+}
