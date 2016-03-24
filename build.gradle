@@ -12,28 +12,26 @@ buildscript {
 }
 
 apply plugin: "net.minecraftforge.gradle.forge"
-
 version = getVersion("VERSION")
 group= "com.pau101.paintthis"
 archivesBaseName = "paintthis"
 sourceCompatibility = targetCompatibility = "1.8"
+def forgeVersion = "1.8.9-11.15.1.1764"
 
 minecraft {
-	version = "1.8.9-11.15.1.1764"
+	version = forgeVersion
 	runDir = "minecraft"
 	mappings = "stable_20"
-	//makeObfSourceJar = false
 }
 
 processResources {
 	inputs.property "version", project.version
 	inputs.property "mcversion", project.minecraft.version
-
+	inputs.property "forgeversion", forgeVersion
 	from(sourceSets.main.resources.srcDirs) {
 		include "mcmod.info"
-		expand "version": project.version, "mcversion": project.minecraft.version
+		expand "version": project.version, "mcversion": project.minecraft.version, "forgeversion": forgeVersion
 	}
-
 	from(sourceSets.main.resources.srcDirs) {
 		exclude "mcmod.info"
 	}

@@ -10,5 +10,6 @@
 	"credits": "MannyInTheMix",
 	"logoFile": "",
 	"screenshots": [],
+	"dependencies": [ "required-after:Forge@[${forgeversion},)" ],
 	"useDependencyInformation": true
 }]
