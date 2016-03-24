@@ -36,6 +36,10 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 
 	private static final EnumFacing NON_HANGING_FACING = EnumFacing.UP;
 
+	private static final double RENDER_DISTANCE = 256;
+
+	private static final int HANGING_POS_VALIDATE_RATE = 40;
+
 	@NBTMutatorProperty(name = "item", type = ItemStack.class)
 	private static final int ITEM_ID = 5;
 
@@ -179,7 +183,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 		if (!worldObj.isRemote && !isDead) {
 			boolean isKill = false;
 			if (isOnBlock()) {
-				if (hangingPositionUpdateTick++ == 40) {
+				if (hangingPositionUpdateTick++ == HANGING_POS_VALIDATE_RATE) {
 					hangingPositionUpdateTick = 0;
 					isKill = !onValidSurface();
 				}
@@ -288,14 +292,15 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 
 	@Override
 	public void moveEntity(double x, double y, double z) {
-		if (!worldObj.isRemote && isOnBlock() && !isDead && x * x + y * y + z * z > 0) {
-			setDead();
-			dropCanvas(null);
-		}
+		breakIfMoveAttempted(x, y, z);
 	}
 
 	@Override
 	public void addVelocity(double x, double y, double z) {
+		breakIfMoveAttempted(x, y, z);
+	}
+
+	private void breakIfMoveAttempted(double x, double y, double z) {
 		if (!worldObj.isRemote && isOnBlock() && !isDead && x * x + y * y + z * z > 0) {
 			setDead();
 			dropCanvas(null);
@@ -393,8 +398,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 
 	@Override
 	public boolean isInRangeToRenderDist(double distance) {
-		double range = 256;
-		return distance < range * range;
+		return distance < RENDER_DISTANCE * RENDER_DISTANCE;
 	}
 
 	public void onCreated() {
