@@ -8,7 +8,7 @@
 	"updateUrl": "",
 	"authorList": [ "pau101" ],
 	"credits": "MannyInTheMix",
-	"logoFile": "",
+	"logoFile": "logo.png",
 	"screenshots": [],
 	"dependencies": [ "required-after:Forge@[${forgeversion},)" ],
 	"useDependencyInformation": true
