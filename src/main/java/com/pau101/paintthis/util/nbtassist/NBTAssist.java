@@ -39,15 +39,6 @@ public final class NBTAssist {
 
 	public static void write(Object object, NBTTagCompound compound) {
 		Class<?> clazz = object.getClass();
-		Method writeToNBT = findWriteToNBT(object);
-		if (writeToNBT != null) {
-			try {
-				writeToNBT.invoke(object, compound);
-			} catch (Exception e) {
-				throw new NBTAssistAccessError(e);
-			}
-			return;
-		}
 		do {
 			Field[] fields = clazz.getDeclaredFields();
 			for (Field field : fields) {
@@ -73,31 +64,6 @@ public final class NBTAssist {
 				}
 			}
 		} while ((clazz = clazz.getSuperclass()) != null);
-	}
-
-	private static Method findWriteToNBT(Object object) {
-		return findNBTMethod(object, "writeToNBT");
-	}
-
-	private static Method findReadFromNBT(Object object) {
-		return findNBTMethod(object, "readFromNBT");
-	}
-
-	private static Method findNBTMethod(Object object, String method) {
-		Class<?> clazz = object.getClass();
-		do {
-			try {
-				Method writeToNBT = clazz.getDeclaredMethod(method);
-				writeToNBT.setAccessible(true);
-				if (writeToNBT.getParameterCount() == 1 && writeToNBT.getParameters()[0].getType() == NBTTagCompound.class) {
-					return writeToNBT;
-				}
-			} catch (NoSuchMethodException e) {
-			} catch (SecurityException e) {
-				throw new NBTAssistAccessError(e);
-			}
-		} while ((clazz = clazz.getSuperclass()) != null);
-		return null;
 	}
 
 	private static NBTBase writeFieldToNBT(Object object, Field field) {
@@ -127,7 +93,7 @@ public final class NBTAssist {
 		if (type == boolean.class || type == Boolean.class) {
 			return new NBTTagByte((byte) ((Boolean) value ? 1 : 0));
 		} else if (type == byte.class || type == Byte.class) {
-			return new NBTTagByte ((Byte) value);
+			return new NBTTagByte((Byte) value);
 		} else if (type == char.class || type == Character.class) {
 			return new NBTTagShort((short) ((Character) value).charValue());
 		} else if (type == short.class || type == Short.class) {
@@ -310,15 +276,6 @@ public final class NBTAssist {
 
 	public static void read(Object object, NBTTagCompound compound) {
 		Class<?> clazz = object.getClass();
-		Method readFromNBT = findReadFromNBT(object);
-		if (readFromNBT != null) {
-			try {
-				readFromNBT.invoke(object, compound);
-			} catch (Exception e) {
-				throw new NBTAssistAccessError(e);
-			}
-			return;
-		}
 		do {
 			Field[] fields = clazz.getDeclaredFields();
 			for (Field field : fields) {
@@ -333,7 +290,7 @@ public final class NBTAssist {
 					NBTMutatorProperty mutatorProperty = field.getAnnotation(NBTMutatorProperty.class);
 					String name = mutatorProperty.name();
 					Class<?> type = mutatorProperty.type();
-					Method setter = getSetter(clazz, name, type, mutatorProperty.getter());
+					Method setter = getSetter(clazz, name, type, mutatorProperty.setter());
 					readFromNBTToSetter(object, setter, name, compound);
 				}
 			}
