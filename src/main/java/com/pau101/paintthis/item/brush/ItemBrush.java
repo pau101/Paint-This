@@ -15,6 +15,8 @@ import com.pau101.paintthis.util.matrix.Matrix;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagInt;
 import net.minecraft.util.StatCollector;
 import net.minecraft.util.Vec3;
 
@@ -92,5 +94,23 @@ public abstract class ItemBrush extends Item {
 
 	private static Vec3 getVec3(Point3f p) {
 		return new Vec3(p.x, p.y, p.z);
+	}
+
+	public static void setDyeIndex(ItemStack brush, int dyeIndex) {
+		brush.setTagInfo("dyeIndex", new NBTTagInt(dyeIndex));
+	}
+
+	public static int getDyeIndex(ItemStack brush) {
+		if (brush == null) {
+			return -1;
+		}
+		if (brush.getItem() instanceof ItemBrush) {
+			NBTTagCompound compound = brush.getTagCompound();
+			if (compound == null || !compound.hasKey("dyeIndex", 3)) {
+				return -1;
+			}
+			return compound.getInteger("dyeIndex");
+		}
+		return -1;
 	}
 }

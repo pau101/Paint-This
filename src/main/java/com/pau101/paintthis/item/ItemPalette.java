@@ -57,8 +57,10 @@ public class ItemPalette extends Item {
 			for (int s = player.inventory.currentItem + 1; s < InventoryPlayer.getHotbarSize(); s++) {
 				ItemStack barStack = player.inventory.getStackInSlot(s);
 				if (barStack != null && barStack.getItem() instanceof ItemBrush) {
-					int from = barStack.getMetadata() > 0 ? ArrayUtils.indexOf(dyes, Dye.getDyeFromDamage(barStack.getMetadata() - 1).getByteValue()) + 1 : 0;
-					Dye newDye = Dye.getDyeFromByte(findNextDye(dyes, from));
+					int from = ItemBrush.getDyeIndex(barStack);
+					int dyeIndex = findNextDye(dyes, from + 1);
+					ItemBrush.setDyeIndex(barStack, dyeIndex);
+					Dye newDye = Dye.getDyeFromByte(dyes[dyeIndex]);
 					barStack.setItemDamage(newDye.getBrushValue());
 					((EntityPlayerMP) player).sendContainerToPlayer(player.inventoryContainer);
 					break;
@@ -68,11 +70,12 @@ public class ItemPalette extends Item {
 		return stack;
 	}
 
-	private static byte findNextDye(byte[] dyes, int from) {
+	private static int findNextDye(byte[] dyes, int from) {
 		for (int i = 0; i < dyes.length; i++) {
-			byte dye = dyes[(i + from) % dyes.length];
+			int dyeIndex = (i + from) % dyes.length;
+			byte dye = dyes[dyeIndex];
 			if (dye != Dye.NO_DYE) {
-				return dye;
+				return dyeIndex;
 			}
 		}
 		throw new IllegalStateException("Couldn't find next dye!? " + Arrays.toString(dyes) + " " + from);
