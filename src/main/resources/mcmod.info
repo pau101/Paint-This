@@ -4,7 +4,7 @@
 	"description": "This mod allows players to paint to their heart's content on canvases placed on easels or a wall and then frame their artwork.",
 	"version": "${version}",
 	"mcversion": "${mcversion}",
-	"url": "",
+	"url": "https://bit.ly/PaintThis",
 	"updateUrl": "",
 	"authorList": [ "pau101" ],
 	"credits": "MannyInTheMix",
