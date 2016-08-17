@@ -1,13 +1,13 @@
 package com.pau101.paintthis.item.crafting.recipes;
 
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.item.crafting.PaintThisRecipe;
-import com.pau101.paintthis.painting.Painting;
-
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.oredict.ShapedOreRecipe;
+
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.item.crafting.PaintThisRecipe;
+import com.pau101.paintthis.painting.Painting;
 
 public class RecipePainting extends ShapedOreRecipe implements PaintThisRecipe {
 	public RecipePainting() {

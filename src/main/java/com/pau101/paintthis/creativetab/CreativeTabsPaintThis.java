@@ -16,7 +16,7 @@ public abstract class CreativeTabsPaintThis extends CreativeTabs {
 
 	private String getShownTabLabel() {
 		if (tabLabel == null) {
-			tabLabel = PaintThis.NAME + " - " + I18n.format(super.getTranslatedTabLabel());	
+			tabLabel = PaintThis.NAME + " - " + I18n.format(super.getTranslatedTabLabel());
 		}
 		return tabLabel;
 	}

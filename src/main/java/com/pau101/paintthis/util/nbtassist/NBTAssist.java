@@ -112,7 +112,7 @@ public final class NBTAssist {
 			boolean[] valueBoolArray = (boolean[]) value;
 			byte[] valueByteArray = new byte[(valueBoolArray.length + 7) / 8];
 			for (int i = 0; i < valueBoolArray.length; i++) {
-				valueByteArray[i / 8] |= (byte) ((valueBoolArray[i] ? 1 : 0) << (i % 8));
+				valueByteArray[i / 8] |= (byte) ((valueBoolArray[i] ? 1 : 0) << i % 8);
 			}
 			NBTTagCompound byteArrayCompound = new NBTTagCompound();
 			byteArrayCompound.setInteger("length", valueBoolArray.length);
@@ -122,7 +122,7 @@ public final class NBTAssist {
 			Boolean[] valueBoolArray = (Boolean[]) value;
 			byte[] valueByteArray = new byte[(valueBoolArray.length + 7) / 8];
 			for (int i = 0; i < valueBoolArray.length; i++) {
-				valueByteArray[i / 8] |= (byte) ((valueBoolArray[i] ? 1 : 0) << (i % 8));
+				valueByteArray[i / 8] |= (byte) ((valueBoolArray[i] ? 1 : 0) << i % 8);
 			}
 			NBTTagCompound byteArrayCompound = new NBTTagCompound();
 			byteArrayCompound.setInteger("length", valueBoolArray.length);
@@ -347,7 +347,7 @@ public final class NBTAssist {
 			boolean[] boolArray = new boolean[list.getInteger("length")];
 			byte[] boolList = list.getByteArray("array");
 			for (int i = 0; i < boolArray.length; i++) {
-				boolArray[i] = ((boolList[i / 8] >>> (i % 8)) & 1) != 0;
+				boolArray[i] = (boolList[i / 8] >>> i % 8 & 1) != 0;
 			}
 			return boolArray;
 		} else if (type == Boolean[].class && tag instanceof NBTTagCompound) {
@@ -355,7 +355,7 @@ public final class NBTAssist {
 			Boolean[] boolArray = new Boolean[list.getInteger("length")];
 			byte[] boolList = list.getByteArray("array");
 			for (int i = 0; i < boolArray.length; i++) {
-				boolArray[i] = ((boolList[i / 8] >>> (i % 8)) & 1) != 0;
+				boolArray[i] = (boolList[i / 8] >>> i % 8 & 1) != 0;
 			}
 			return boolArray;
 		} else if (type == byte[].class && tag instanceof NBTTagByteArray) {

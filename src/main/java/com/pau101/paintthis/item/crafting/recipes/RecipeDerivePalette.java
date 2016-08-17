@@ -35,7 +35,7 @@ public abstract class RecipeDerivePalette implements PaintThisRecipe {
 			for (int y = 0; y < height; y++) {
 				ItemStack ingredient = inventory.getStackInRowAndColumn(x, y);
 				if (ingredient != null) {
-					Item item = ingredient.getItem(); 
+					Item item = ingredient.getItem();
 					if (item == PaintThis.palette) {
 						if (palettePos != null || getDyeRequirement() && !ItemPalette.hasDyes(ingredient)) {
 							return false;

@@ -140,8 +140,9 @@ public class ItemPaletteModel implements IModel {
 
 	private static void addSideQuad(ImmutableList.Builder<BakedQuad> builder, BitSet faces, VertexFormat format, Optional<TRSRTransformation> transform, EnumFacing side, int tint, TextureAtlasSprite sprite, int uMax, int vMax, int u, int v) {
 		int si = side.ordinal();
-		if (si > 4)
+		if (si > 4) {
 			si -= 2;
+		}
 		int index = (vMax + 1) * ((uMax + 1) * si + u) + v;
 		if (!faces.get(index)) {
 			faces.set(index);

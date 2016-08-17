@@ -83,7 +83,7 @@ public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmar
 			ImmutableList.Builder<BakedQuad> quads = ImmutableList.builder();
 			quads.addAll(this.quads.get(0));
 			for (int i = 0; i < 8; i++) {
-				if ((index & (1 << i)) != 0) {
+				if ((index & 1 << i) != 0) {
 					quads.addAll(this.quads.get(i + 1));
 				}
 			}
@@ -98,7 +98,7 @@ public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmar
 			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
 			for (int i = 0; i < dyes.length; i++) {
 				if (dyes[i] != Dye.NO_DYE) {
-					index |= (1 << i);
+					index |= 1 << i;
 				}
 			}
 		}

@@ -1,5 +1,30 @@
 package com.pau101.paintthis.proxy;
 
+import java.util.Locale;
+
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.passive.EntityHorse;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.world.World;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.EntityEvent.EntityConstructing;
+import net.minecraftforge.event.entity.player.EntityInteractEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.oredict.OreDictionary;
+import net.minecraftforge.oredict.RecipeSorter;
+import net.minecraftforge.oredict.ShapedOreRecipe;
+import net.minecraftforge.oredict.ShapelessOreRecipe;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.pau101.paintthis.PaintThis;
@@ -30,27 +55,6 @@ import com.pau101.paintthis.painting.Painting;
 import com.pau101.paintthis.property.HorseShearability;
 import com.pau101.paintthis.util.DyeOreDictHelper;
 
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.EntityHorse;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.EntityEvent.EntityConstructing;
-import net.minecraftforge.event.entity.player.EntityInteractEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.registry.EntityRegistry;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.oredict.OreDictionary;
-import net.minecraftforge.oredict.RecipeSorter;
-import net.minecraftforge.oredict.ShapedOreRecipe;
-import net.minecraftforge.oredict.ShapelessOreRecipe;
-
 public class CommonProxy {
 	private static final String RECIPE_DEPENDENCY = "after:forge:shapedore";
 
@@ -69,13 +73,7 @@ public class CommonProxy {
 		PaintThis.paintbrushSmall = registerPaintbrush(ItemPaintbrush.Size.SMALL);
 		PaintThis.paintbrushMedium = registerPaintbrush(ItemPaintbrush.Size.MEDIUM);
 		PaintThis.paintbrushLarge = registerPaintbrush(ItemPaintbrush.Size.LARGE);
-		PaintThis.paintbrushes = Maps.immutableEnumMap(
-			ImmutableMap.<ItemPaintbrush.Size, ItemPaintbrush>builder()
-				.put(ItemPaintbrush.Size.SMALL, PaintThis.paintbrushSmall)
-				.put(ItemPaintbrush.Size.MEDIUM, PaintThis.paintbrushMedium)
-				.put(ItemPaintbrush.Size.LARGE, PaintThis.paintbrushLarge)
-			.build()
-		);
+		PaintThis.paintbrushes = Maps.immutableEnumMap(ImmutableMap.<ItemPaintbrush.Size, ItemPaintbrush> builder().put(ItemPaintbrush.Size.SMALL, PaintThis.paintbrushSmall).put(ItemPaintbrush.Size.MEDIUM, PaintThis.paintbrushMedium).put(ItemPaintbrush.Size.LARGE, PaintThis.paintbrushLarge).build());
 		PaintThis.palette = register(new ItemPalette(), "palette");
 		PaintThis.paletteKnife = register(new ItemPaletteKnife(), "palette_knife");
 		PaintThis.dye = register(new ItemPaintDye(), "dye", PaintThis.dyesTab);
@@ -150,24 +148,35 @@ public class CommonProxy {
 
 	@SubscribeEvent
 	public void onHorseConstructing(EntityConstructing event) {
-		if (event.entity instanceof EntityHorse) {
+		if (isHorse(event.entity)) {
 			event.entity.registerExtendedProperties(HorseShearability.IDENTIFIER, new HorseShearability());
 		}
 	}
 
 	@SubscribeEvent
 	public void onInteract(EntityInteractEvent event) {
-		if (event.target instanceof EntityHorse) {
+		if (isHorse(event.target)) {
 			EntityPlayer player = event.entityPlayer;
 			if (player.getHeldItem() != null && player.getHeldItem().getItem() == Items.shears) {
-				if (!event.entityLiving.worldObj.isRemote) {
-					EntityHorse horse = (EntityHorse) event.target;
+				if (!event.target.worldObj.isRemote) {
+					EntityLiving horse = (EntityLiving) event.target;
 					HorseShearability tolerance = (HorseShearability) horse.getExtendedProperties(HorseShearability.IDENTIFIER);
 					tolerance.shear(horse, player);
 				}
 				event.setCanceled(true);
 			}
 		}
+	}
+
+	private boolean isHorse(Entity entity) {
+		if (entity instanceof EntityHorse) {
+			return !((EntityHorse) entity).isUndead();
+		}
+		String id = EntityList.getEntityString(entity);
+		if (id != null && id.toLowerCase(Locale.ROOT).contains("horse")) {
+			return entity instanceof EntityLiving;
+		}
+		return false;
 	}
 
 	private <M extends SelfProcessingMessage> void registerMessage(Class<M> messageType, Side toSide) {

@@ -102,7 +102,7 @@ public final class LineDrawer {
 				y += ystep;
 				error += E_diag;
 				if (p_error >= threshold) {
-					drawXPerp(B, x, y, dx, dy, pxstep, pystep, (p_error + E_diag + E_square), w_left, w_right, error);
+					drawXPerp(B, x, y, dx, dy, pxstep, pystep, p_error + E_diag + E_square, w_left, w_right, error);
 					p_error += E_diag;
 				}
 				p_error += E_square;

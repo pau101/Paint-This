@@ -1,7 +1,6 @@
 package com.pau101.paintthis.network.server;
 
 import io.netty.buffer.ByteBuf;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketBuffer;

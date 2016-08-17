@@ -162,9 +162,9 @@ public class PaintingDrawable extends Painting {
 				} else {
 					int v = paintTexture[(x + paintXOffset) % paintTextureWidth + (y + paintYOffset) % paintTextureHeight * paintTextureWidth] & 0xFF;
 					int rgb = Dye.getDyeFromByte(dye).getColor();
-					rgb = (rgb & 0xFF00FFFF) | ((v * ((rgb >> 16) & 0xFF) / 0xFF) << 16);
-					rgb = (rgb & 0xFFFF00FF) | ((v * ((rgb >> 8) & 0xFF) / 0xFF) << 8);
-					rgb = (rgb & 0xFFFFFF00) | (v * (rgb & 0xFF) / 0xFF);
+					rgb = rgb & 0xFF00FFFF | v * (rgb >> 16 & 0xFF) / 0xFF << 16;
+					rgb = rgb & 0xFFFF00FF | v * (rgb >> 8 & 0xFF) / 0xFF << 8;
+					rgb = rgb & 0xFFFFFF00 | v * (rgb & 0xFF) / 0xFF;
 					pixels[i] = rgb;
 				}
 			}

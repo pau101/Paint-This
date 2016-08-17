@@ -6,6 +6,6 @@ import com.google.common.base.CaseFormat;
 
 public interface PaintThisRecipe extends IRecipe {
 	public default String getRegistryName() {
-		return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, getClass().getSimpleName());
+		return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_UNDERSCORE, getClass().getSimpleName());
 	}
 }

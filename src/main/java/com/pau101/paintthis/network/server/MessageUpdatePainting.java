@@ -1,8 +1,5 @@
 package com.pau101.paintthis.network.server;
 
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.MessagePainting;
-
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
@@ -10,6 +7,9 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.network.MessagePainting;
 
 public class MessageUpdatePainting extends MessagePainting {
 	public MessageUpdatePainting() {}

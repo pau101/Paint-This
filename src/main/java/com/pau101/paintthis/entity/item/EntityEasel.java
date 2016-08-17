@@ -1,12 +1,8 @@
 package com.pau101.paintthis.entity.item;
 
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.painting.Painting;
-import com.pau101.paintthis.util.Mth;
-
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
-import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraft.init.Blocks;
@@ -19,12 +15,18 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 
-public class EntityEasel extends EntityLiving implements IEntityAdditionalSpawnData {
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.painting.Painting;
+import com.pau101.paintthis.util.Mth;
+
+public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSpawnData {
 	private static final double RENDER_DISTANCE = 256;
 
 	private static final int SUPPORTED_CANVAS_WIDTH = 3;
 
 	private static final int SUPPORTED_CANVAS_HEIGHT = 2;
+
+	private static final ItemStack[] INVENTORY = {};
 
 	private long lastHitTime;
 
@@ -67,7 +69,7 @@ public class EntityEasel extends EntityLiving implements IEntityAdditionalSpawnD
 	}
 
 	@Override
-	protected boolean interact(EntityPlayer player) {
+	public boolean interactFirst(EntityPlayer player) {
 		ItemStack heldStack = player.getHeldItem();
 		if (!(riddenByEntity instanceof EntityCanvas) && Painting.isPainting(heldStack) && canSupportPainting(heldStack)) {
 			if (!worldObj.isRemote) {
@@ -201,5 +203,28 @@ public class EntityEasel extends EntityLiving implements IEntityAdditionalSpawnD
 	public void readSpawnData(ByteBuf additionalData) {
 		// Do this so there is no yaw interpolation
 		prevRotationYaw = rotationYawHead = rotationYaw;
+	}
+
+	@Override
+	public ItemStack getHeldItem() {
+		return null;
+	}
+
+	@Override
+	public ItemStack getEquipmentInSlot(int slot) {
+		return null;
+	}
+
+	@Override
+	public ItemStack getCurrentArmor(int slot) {
+		return null;
+	}
+
+	@Override
+	public void setCurrentItemOrArmor(int slotIn, ItemStack stack) {}
+
+	@Override
+	public ItemStack[] getInventory() {
+		return INVENTORY;
 	}
 }

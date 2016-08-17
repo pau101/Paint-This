@@ -43,65 +43,65 @@ public class RecipeCanvasExtend implements PaintThisRecipe {
 					canvasX = testX;
 					canvasY = testY;
 					rectangle:
-					for (int x = testX; x < width; x++, canvasesAcross++) {
-						int down = 0;
-						boolean first = true;
-						for (int y = testY; y < height; y++, down++) {
-							stack = inventory.getStackInRowAndColumn(x, y);
-							if (!Painting.isPainting(stack) || stack.getMetadata() != 0) {
-								if (first) {
-									// We got a rectangle of canvases which didn't end in the last column
-									break rectangle;
-								} else {
-									// Finished this column
-									break;
+						for (int x = testX; x < width; x++, canvasesAcross++) {
+							int down = 0;
+							boolean first = true;
+							for (int y = testY; y < height; y++, down++) {
+								stack = inventory.getStackInRowAndColumn(x, y);
+								if (!Painting.isPainting(stack) || stack.getMetadata() != 0) {
+									if (first) {
+										// We got a rectangle of canvases which didn't end in the last column
+										break rectangle;
+									} else {
+										// Finished this column
+										break;
+									}
 								}
-							}
-							int canvasHeight = Painting.getPaintingHeight(stack);
-							if (x > 0) {
-								ItemStack left = found[x - 1 + y * width];
-								if (left != null) {
-									if (Painting.getPaintingHeight(left) != canvasHeight) {
-										// Unequal merge heights
+								int canvasHeight = Painting.getPaintingHeight(stack);
+								if (x > 0) {
+									ItemStack left = found[x - 1 + y * width];
+									if (left != null) {
+										if (Painting.getPaintingHeight(left) != canvasHeight) {
+											// Unequal merge heights
+											return false;
+										}
+									}
+								}
+								if (x == testX) {
+									mergedHeight += canvasHeight;
+									if (mergedHeight > PaintThis.MAX_CANVAS_SIZE) {
+										// Surpassed maximum height
 										return false;
 									}
 								}
-							}
-							if (x == testX) {
-								mergedHeight += canvasHeight;
-								if (mergedHeight > PaintThis.MAX_CANVAS_SIZE) {
-									// Surpassed maximum height
-									return false;
+								int canvasWidth = Painting.getPaintingWidth(stack);
+								if (y > 0) {
+									ItemStack right = found[x + (y - 1) * width];
+									if (right != null) {
+										if (Painting.getPaintingWidth(right) != canvasWidth) {
+											// Unequal merge widths
+											return false;
+										}
+									}
 								}
-							}
-							int canvasWidth = Painting.getPaintingWidth(stack);
-							if (y > 0) {
-								ItemStack right = found[x + (y - 1) * width];
-								if (right != null) {
-									if (Painting.getPaintingWidth(right) != canvasWidth) {
-										// Unequal merge widths
+								if (y == testY) {
+									mergedWidth += canvasWidth;
+									if (mergedWidth > PaintThis.MAX_CANVAS_SIZE) {
+										// Surpassed maximum width
 										return false;
 									}
 								}
+								first = false;
+								foundRectangle = true;
+								found[x + y * width] = stack;
 							}
-							if (y == testY) {
-								mergedWidth += canvasWidth;
-								if (mergedWidth > PaintThis.MAX_CANVAS_SIZE) {
-									// Surpassed maximum width
-									return false;
-								}
+							if (canvasesDown == 0) {
+								canvasesDown = down;
+							} else if (canvasesDown != down) {
+								// Incomplete rectangle
+								return false;
 							}
-							first = false;
-							foundRectangle = true;
-							found[x + y * width] = stack;
 						}
-						if (canvasesDown == 0) {
-							canvasesDown = down;
-						} else if (canvasesDown != down) {
-							// Incomplete rectangle
-							return false;
-						}
-					}
 					if (canvasesAcross == 0) {
 						// The first found stack was not a canvas
 						return false;
@@ -136,8 +136,8 @@ public class RecipeCanvasExtend implements PaintThisRecipe {
 				}
 				px += painting.getPixelWidth();
 				if (across == 0) {
-					stepY = painting.getPixelHeight();	
-				} 
+					stepY = painting.getPixelHeight();
+				}
 				if (painting.hasAssignedUUID()) {
 					seed = seed * 31 + painting.getUUID().hashCode();
 					needsUUIDAssignment = true;

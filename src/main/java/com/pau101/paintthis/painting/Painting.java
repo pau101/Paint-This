@@ -1,21 +1,22 @@
 package com.pau101.paintthis.painting;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.dye.Dye;
-import com.pau101.paintthis.util.nbtassist.NBTAssist;
-import com.pau101.paintthis.util.nbtassist.NBTProperty;
-
-import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.dye.Dye;
+import com.pau101.paintthis.util.nbtassist.NBTAssist;
+import com.pau101.paintthis.util.nbtassist.NBTProperty;
 
 public class Painting {
 	public static final int PIXELS_PER_BLOCK = 16;
@@ -40,7 +41,7 @@ public class Painting {
 	@NBTProperty
 	private Signature signature;
 
-	private Optional<Change> changedRegion = Optional.<Change>empty();
+	private Optional<Change> changedRegion = Optional.<Change> empty();
 
 	private boolean isRecordingChange;
 
@@ -105,15 +106,16 @@ public class Painting {
 	public Signature getSignature() {
 		return signature;
 	}
+
 	public void beginRecordingChange() {
 		isRecordingChange = true;
-		changedRegion = Optional.<Change>empty();
+		changedRegion = Optional.<Change> empty();
 	}
 
 	public Optional<Change> endAndRemoveChange() {
 		isRecordingChange = false;
 		Optional<Change> change = changedRegion;
-		changedRegion = Optional.<Change>empty();
+		changedRegion = Optional.<Change> empty();
 		return change;
 	}
 
@@ -271,7 +273,7 @@ public class Painting {
 				minY = y;
 			}
 			if (x > maxX) {
-				maxX =  x;
+				maxX = x;
 			}
 			if (y > maxY) {
 				maxY = y;
@@ -300,8 +302,8 @@ public class Painting {
 			byte[] data = new byte[w * h];
 			for (int y = 0; y < h; y++) {
 				for (int x = 0; x < w; x++) {
-					data[x + y * w] = Painting.this.data[(x + minX) + (y + minY) * getPixelWidth()];
-				}	
+					data[x + y * w] = Painting.this.data[x + minX + (y + minY) * getPixelWidth()];
+				}
 			}
 			return data;
 		}

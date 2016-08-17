@@ -32,8 +32,8 @@ public class BakedItemPaletteModel implements IFlexibleBakedModel, IPerspectiveA
 
 	private final boolean isCulled;
 
-	public BakedItemPaletteModel(ImmutableList<BakedQuad> layerQuads, TextureAtlasSprite particle, VertexFormat format, ImmutableMap<TransformType, TRSRTransformation> transforms, BakedItemPaletteModel otherModel) {
-		this.quads = layerQuads;
+	public BakedItemPaletteModel(ImmutableList<BakedQuad> quads, TextureAtlasSprite particle, VertexFormat format, ImmutableMap<TransformType, TRSRTransformation> transforms, BakedItemPaletteModel otherModel) {
+		this.quads = quads;
 		this.particle = particle;
 		this.format = format;
 		this.transforms = transforms;

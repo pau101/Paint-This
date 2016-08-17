@@ -2,13 +2,6 @@ package com.pau101.paintthis;
 
 import java.util.Set;
 
-import org.apache.commons.lang3.ArrayUtils;
-
-import com.google.common.collect.ImmutableMap;
-import com.pau101.paintthis.item.brush.ItemBrush;
-import com.pau101.paintthis.item.brush.ItemPaintbrush;
-import com.pau101.paintthis.proxy.CommonProxy;
-
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -23,13 +16,20 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 
+import org.apache.commons.lang3.ArrayUtils;
+
+import com.google.common.collect.ImmutableMap;
+import com.pau101.paintthis.item.brush.ItemBrush;
+import com.pau101.paintthis.item.brush.ItemPaintbrush;
+import com.pau101.paintthis.proxy.CommonProxy;
+
 @Mod(modid = PaintThis.MODID, name = PaintThis.NAME, version = PaintThis.VERSION)
 public class PaintThis {
 	public static final String MODID = "paintthis";
 
 	public static final String NAME = "Paint This!";
 
-	public static final String VERSION = "0.0.2";
+	public static final String VERSION = "0.0.3";
 
 	public static final int MAX_CANVAS_SIZE = 4;
 

@@ -5,13 +5,6 @@ import java.util.Optional;
 
 import javax.vecmath.Point3f;
 
-import org.apache.commons.lang3.tuple.Pair;
-
-import com.pau101.paintthis.dye.Dye;
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.util.Mth;
-import com.pau101.paintthis.util.matrix.Matrix;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -19,6 +12,13 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagInt;
 import net.minecraft.util.StatCollector;
 import net.minecraft.util.Vec3;
+
+import org.apache.commons.lang3.tuple.Pair;
+
+import com.pau101.paintthis.dye.Dye;
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.util.Mth;
+import com.pau101.paintthis.util.matrix.Matrix;
 
 public abstract class ItemBrush extends Item {
 	public static final double REACH = 3;

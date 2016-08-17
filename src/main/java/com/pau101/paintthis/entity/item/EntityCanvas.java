@@ -1,8 +1,9 @@
 package com.pau101.paintthis.entity.item;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.UUID;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRedstoneDiode;
 import net.minecraft.entity.Entity;
@@ -69,7 +70,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	public EntityCanvas(World world, ItemStack paintingItem, boolean isBeingPlaced, BlockPos hangingPosition, EnumFacing hangingDirection) {
 		super(world);
 		setItem(paintingItem);
-		this.painting = Painting.getPainting(worldObj, paintingItem);
+		painting = Painting.getPainting(worldObj, paintingItem);
 		this.isBeingPlaced = isBeingPlaced;
 		this.hangingPosition = hangingPosition;
 		this.hangingDirection = hangingDirection;
@@ -313,7 +314,6 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 		setRotation(yaw, pitch);
 	}
 
-
 	@Override
 	public void setPosition(double x, double y, double z) {
 		posX = x;
@@ -330,6 +330,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 			}
 		}
 	}
+
 	public void setHangingPosition(BlockPos hangingPosition) {
 		if (!this.hangingPosition.equals(hangingPosition)) {
 			this.hangingPosition = hangingPosition;

@@ -2,16 +2,16 @@ package com.pau101.paintthis.item.brush;
 
 import java.util.Optional;
 
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.Vec3;
+import net.minecraft.world.World;
+
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.entity.item.EntityCanvas;
 import com.pau101.paintthis.network.client.MessageSignPainting;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Vec3;
-import net.minecraft.world.World;
 
 public class ItemSigningBrush extends ItemBrush {
 	public ItemSigningBrush() {

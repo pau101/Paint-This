@@ -19,9 +19,9 @@ import com.pau101.paintthis.painting.Painting;
 public class Painter implements IExtendedEntityProperties {
 	public static final String IDENTIFIER = PaintThis.MODID + ':' + "painter";
 
-	private Optional<Vec3> lastStroke = Optional.<Vec3>empty();
+	private Optional<Vec3> lastStroke = Optional.<Vec3> empty();
 
-	private Optional<EntityCanvas> lastPaintedCanvas = Optional.<EntityCanvas>empty();
+	private Optional<EntityCanvas> lastPaintedCanvas = Optional.<EntityCanvas> empty();
 
 	@Override
 	public void init(Entity entity, World world) {}
@@ -34,8 +34,8 @@ public class Painter implements IExtendedEntityProperties {
 
 	public void finishStroke() {
 		if (lastStroke.isPresent()) {
-			lastStroke = Optional.<Vec3>empty();
-			lastPaintedCanvas = Optional.<EntityCanvas>empty();
+			lastStroke = Optional.<Vec3> empty();
+			lastPaintedCanvas = Optional.<EntityCanvas> empty();
 		}
 	}
 

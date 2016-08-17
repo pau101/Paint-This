@@ -1,5 +1,6 @@
 package com.pau101.paintthis.item.brush;
 
+import java.util.Locale;
 import java.util.Optional;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -59,7 +60,9 @@ public class ItemPaintbrush extends ItemBrush {
 	}
 
 	public enum Size {
-		SMALL, MEDIUM, LARGE;
+		SMALL,
+		MEDIUM,
+		LARGE;
 
 		private final int value;
 
@@ -69,7 +72,7 @@ public class ItemPaintbrush extends ItemBrush {
 
 		private Size() {
 			value = ordinal() + 1;
-			filename = name().toLowerCase();
+			filename = name().toLowerCase(Locale.ROOT);
 			unlocalizedName = Util.getEnumLowerCamelName(this);
 		}
 

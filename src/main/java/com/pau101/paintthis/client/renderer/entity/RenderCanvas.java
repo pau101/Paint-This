@@ -15,7 +15,6 @@ import org.lwjgl.opengl.GL11;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.painting.Painting;
 import com.pau101.paintthis.painting.PaintingDrawable;
 import com.pau101.paintthis.painting.Signature;
 import com.pau101.paintthis.painting.Signature.Side;
@@ -94,29 +93,29 @@ public class RenderCanvas extends Render<EntityCanvas> {
 	}
 
 	private void drawSignature(PaintingDrawable painting) {
-        Signature signature = painting.getSignature();
-        FontRenderer renderer = Minecraft.getMinecraft().fontRendererObj;
-        int color = signature.getDye().getColor();
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.pushMatrix();
-        float scale = 1 / 8F;
-        GlStateManager.scale(0.0625F, 0.0625F, 0.0625F);
-        String name = signature.getSignerName();
-        float sx;
-        if (signature.getSide() == Side.RIGHT) {
-        	sx = painting.getPixelWidth() / 2 - renderer.getStringWidth(name) * scale - 0.5F;
-        } else {
-        	sx = -painting.getPixelWidth() / 2 + 0.5F;
-        }
-        float sy = painting.getPixelHeight() / 2 - 1.5F;
-        GlStateManager.translate(sx, 0.6F, sy);
-        GlStateManager.scale(scale, scale, scale);
-        GL11.glNormal3f(0, 0, -1);
-        GlStateManager.rotate(90, 1, 0, 0);
-        renderer.drawString(name, 0, 0, color);
-        GlStateManager.popMatrix();
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.color(1, 1, 1);
+		Signature signature = painting.getSignature();
+		FontRenderer renderer = Minecraft.getMinecraft().fontRendererObj;
+		int color = signature.getDye().getColor();
+		GlStateManager.enableRescaleNormal();
+		GlStateManager.pushMatrix();
+		float scale = 1 / 8F;
+		GlStateManager.scale(0.0625F, 0.0625F, 0.0625F);
+		String name = signature.getSignerName();
+		float sx;
+		if (signature.getSide() == Side.RIGHT) {
+			sx = painting.getPixelWidth() / 2 - renderer.getStringWidth(name) * scale - 0.5F;
+		} else {
+			sx = -painting.getPixelWidth() / 2 + 0.5F;
+		}
+		float sy = painting.getPixelHeight() / 2 - 1.5F;
+		GlStateManager.translate(sx, 0.6F, sy);
+		GlStateManager.scale(scale, scale, scale);
+		GL11.glNormal3f(0, 0, -1);
+		GlStateManager.rotate(90, 1, 0, 0);
+		renderer.drawString(name, 0, 0, color);
+		GlStateManager.popMatrix();
+		GlStateManager.disableRescaleNormal();
+		GlStateManager.color(1, 1, 1);
 	}
 
 	@Override

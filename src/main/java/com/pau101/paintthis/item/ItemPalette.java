@@ -8,14 +8,10 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagByteArray;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
-import org.apache.commons.lang3.ArrayUtils;
-
-import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.dye.Dye;
 import com.pau101.paintthis.item.brush.ItemBrush;
 
@@ -46,7 +42,7 @@ public class ItemPalette extends Item {
 				if (dyes[i] != Dye.NO_DYE) {
 					tooltip.add(StatCollector.translateToLocal(Dye.getDyeFromByte(dyes[i]).getCompleteUnlocalizedName()));
 				}
-			}	
+			}
 		}
 	}
 

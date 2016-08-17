@@ -3,28 +3,9 @@ package com.pau101.paintthis.proxy;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 
 import javax.imageio.ImageIO;
-
-import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
-
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.client.model.item.ItemPaletteModel;
-import com.pau101.paintthis.client.renderer.entity.RenderCanvas;
-import com.pau101.paintthis.client.renderer.entity.RenderEasel;
-import com.pau101.paintthis.dye.Dye;
-import com.pau101.paintthis.dye.DyeType;
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.entity.item.EntityEasel;
-import com.pau101.paintthis.item.ItemPalette;
-import com.pau101.paintthis.item.brush.ItemBrush;
-import com.pau101.paintthis.item.brush.ItemPaintbrush;
-import com.pau101.paintthis.item.crafting.PositionedItemStack;
-import com.pau101.paintthis.painting.Painting;
-import com.pau101.paintthis.painting.PaintingDrawable;
-import com.pau101.paintthis.property.Painter;
-import com.pau101.paintthis.util.DyeOreDictHelper;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
@@ -56,6 +37,26 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.fml.client.registry.RenderingRegistry;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+
+import org.lwjgl.input.Keyboard;
+import org.lwjgl.input.Mouse;
+
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.client.model.item.ItemPaletteModel;
+import com.pau101.paintthis.client.renderer.entity.RenderCanvas;
+import com.pau101.paintthis.client.renderer.entity.RenderEasel;
+import com.pau101.paintthis.dye.Dye;
+import com.pau101.paintthis.dye.DyeType;
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.entity.item.EntityEasel;
+import com.pau101.paintthis.item.ItemPalette;
+import com.pau101.paintthis.item.brush.ItemBrush;
+import com.pau101.paintthis.item.brush.ItemPaintbrush;
+import com.pau101.paintthis.item.crafting.PositionedItemStack;
+import com.pau101.paintthis.painting.Painting;
+import com.pau101.paintthis.painting.PaintingDrawable;
+import com.pau101.paintthis.property.Painter;
+import com.pau101.paintthis.util.DyeOreDictHelper;
 
 public class ClientProxy extends CommonProxy {
 	private static final ResourceLocation DYE_PALETTE_TEXTURE = new ResourceLocation(PaintThis.MODID, "textures/dye_palette.png");
@@ -106,7 +107,7 @@ public class ClientProxy extends CommonProxy {
 		ModelResourceLocation[] names = new ModelResourceLocation[dyes.length - Dye.VANILLA_DYE_COUNT];
 		for (int i = Dye.VANILLA_DYE_COUNT, j = 0; j < names.length; i++, j++) {
 			Dye dye = dyes[i];
-			names[j] = registerItemModel(PaintThis.dye, dye.getDamage(), "dye_" + dye.name().toLowerCase());
+			names[j] = registerItemModel(PaintThis.dye, dye.getDamage(), "dye_" + dye.name().toLowerCase(Locale.ROOT));
 		}
 		ModelBakery.registerItemVariants(PaintThis.dye, names);
 	}
@@ -356,8 +357,8 @@ public class ClientProxy extends CommonProxy {
 					continue;
 				}
 				int mi = PositionedItemStack.getXYIndex(i);
-				int nx = sx + (mi / 3 - 1);
-				int ny = sy + (mi % 3 - 1);
+				int nx = sx + mi / 3 - 1;
+				int ny = sy + mi % 3 - 1;
 				if (nx < 0 || ny < 0 || nx >= w || ny >= h) {
 					continue;
 				}
@@ -368,8 +369,7 @@ public class ClientProxy extends CommonProxy {
 			}
 		} finally {
 			/*
-			 * Hopefully permanent ghosting can't happen...
-			 * ... Hey, who turned out the lights?
+			 * Hopefully permanent ghosting can't happen... ... Hey, who turned out the lights?
 			 */
 			isGhost = false;
 		}

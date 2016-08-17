@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Vector3d;
+
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.Vec3;
 
@@ -143,18 +144,25 @@ public final class Mth {
 		Vec3 E_03 = V_01.subtract(V_00);
 		Vec3 P = D.crossProduct(E_03);
 		double det = E_01.dotProduct(P);
-		if (frontOnly && det > 0) return Optional.<Vec3>empty();
-		if (Math.abs(det) < e) return Optional.<Vec3>empty();
+		if (frontOnly && det > 0) {
+			return Optional.<Vec3> empty();
+		}
+		if (Math.abs(det) < e) {
+			return Optional.<Vec3> empty();
+		}
 		Vec3 T = O.subtract(V_00);
 		double a = T.dotProduct(P) / det;
-		if (a < 0 || a > 1) return Optional.<Vec3>empty();
+		if (a < 0 || a > 1) {
+			return Optional.<Vec3> empty();
+		}
 		Vec3 Q = T.crossProduct(E_01);
 		double b = D.dotProduct(Q) / det;
-		if (b < 0 || b > 1) return Optional.<Vec3>empty();
+		if (b < 0 || b > 1) {
+			return Optional.<Vec3> empty();
+		}
 
 		/**
-		 * In my testing this block made triangle V_10 V_11 V_01 not test correctly
-		 * by the ray parameter being less than zero.
+		 * In my testing this block made triangle V_10 V_11 V_01 not test correctly by the ray parameter being less than zero.
 		 */
 		// Reject rays using the barycentric coordinates of
 		// the intersection point with respect to T'.
@@ -175,18 +183,18 @@ public final class Mth {
 		// Compute the ray parameter of the intersection
 		// point.
 		double t = E_03.dotProduct(Q) / det;
-		if (t < 0) return Optional.<Vec3>empty();
+		if (t < 0) {
+			return Optional.<Vec3> empty();
+		}
 
 		// Compute the barcentric coordinates of V_11.
 		Vec3 E_02 = V_11.subtract(V_00);
 		Vec3 N = E_01.crossProduct(E_03);
 		double a_11, b_11;
-		if (Math.abs(N.xCoord) >= Math.abs(N.yCoord) &&
-			Math.abs(N.xCoord) >= Math.abs(N.zCoord)) {
+		if (Math.abs(N.xCoord) >= Math.abs(N.yCoord) && Math.abs(N.xCoord) >= Math.abs(N.zCoord)) {
 			a_11 = (E_02.yCoord * E_03.zCoord - E_02.zCoord * E_03.yCoord) / N.xCoord;
 			b_11 = (E_01.yCoord * E_02.zCoord - E_01.zCoord * E_02.yCoord) / N.xCoord;
-		} else if (Math.abs(N.yCoord) >= Math.abs(N.xCoord) &&
-			Math.abs(N.yCoord) >= Math.abs(N.zCoord)) {
+		} else if (Math.abs(N.yCoord) >= Math.abs(N.xCoord) && Math.abs(N.yCoord) >= Math.abs(N.zCoord)) {
 			a_11 = (E_02.zCoord * E_03.xCoord - E_02.xCoord * E_03.zCoord) / N.yCoord;
 			b_11 = (E_01.zCoord * E_02.xCoord - E_01.xCoord * E_02.zCoord) / N.yCoord;
 		} else {
@@ -199,8 +207,11 @@ public final class Mth {
 		double u, v;
 		if (Math.abs(a_11 - 1) < e) {
 			u = a;
-			if (Math.abs(b_11 - 1) < e) v = b;
-			else v = b / (u * (b_11 - 1) + 1);
+			if (Math.abs(b_11 - 1) < e) {
+				v = b;
+			} else {
+				v = b / (u * (b_11 - 1) + 1);
+			}
 		} else if (Math.abs(b_11 - 1) < e) {
 			v = b;
 			u = a / (v * (a_11 - 1) + 1);
@@ -211,7 +222,9 @@ public final class Mth {
 			double d = B * B - 4 * A * C;
 			double q = -0.5 * (B + Math.signum(B) * Math.sqrt(d));
 			u = q / A;
-			if (u < 0 || u > 1) u = C / q;
+			if (u < 0 || u > 1) {
+				u = C / q;
+			}
 			v = b / (u * (b_11 - 1) + 1);
 		}
 		return Optional.of(new Vec3(u, v, t));
