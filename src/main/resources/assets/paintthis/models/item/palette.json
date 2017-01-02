@@ -1,5 +1,5 @@
 {
-	"parent": "builtin/generated",
+	"parent": "item/generated",
 	"textures": {
 		"layer0": "paintthis:items/palette",
 		"layer1": "paintthis:items/palette_dye_0",
