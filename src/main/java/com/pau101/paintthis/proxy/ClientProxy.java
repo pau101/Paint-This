@@ -287,6 +287,13 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	@SubscribeEvent
+	public void renderSpecificHand(RenderSpecificHandEvent event) {
+		if (shouldShowInteractivePalette(Minecraft.getMinecraft().thePlayer, event.getHand())) {
+			event.setCanceled(true);
+		}
+	}
+
+	@SubscribeEvent
 	public void onRenderWorldLast(RenderWorldLastEvent event) {
 		Minecraft mc = Minecraft.getMinecraft();
 		ItemRenderer renderer = mc.getItemRenderer();
@@ -315,10 +322,8 @@ public class ClientProxy extends CommonProxy {
 				stack = renderer.itemStackOffHand;
 				other = renderer.itemStackMainHand;
 			}
-			GlStateManager.pushMatrix();
 			float yaw = player.prevRenderYawOffset + (player.renderYawOffset - player.prevRenderYawOffset) * delta;
 			boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT == (hand == EnumHand.OFF_HAND);
-
 			float thisPrevEP, thisEP, otherPrevEP, otherEP;
 			if (mainHand) {
 				thisPrevEP = renderer.prevEquippedProgressMainHand;
@@ -333,86 +338,99 @@ public class ClientProxy extends CommonProxy {
 			}
 			float pep = thisPrevEP, ep = thisEP;
 			if (other != null && other.getItem() instanceof ItemBrush) {
-				ItemStack heldOther = player.getHeldItem(mainHand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
-				if (otherPrevEP > otherEP && heldOther != other || otherPrevEP < otherEP && heldOther == other) {
+				if (thisEP == thisPrevEP && otherEP < 1) {
 					pep = otherPrevEP;
 					ep = otherEP;
 				}
 			}
 			float equip = 1 - (pep + (ep - pep) * delta);
-			MATRIX.setIdentity();
-			MATRIX.mult(getMatrix(GL11.GL_MODELVIEW_MATRIX));
-			MATRIX.rotate(-yaw, 0, 1, 0);
-			MATRIX.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
-			MATRIX.rotate(70, 1, 0, 0);
-			if (isLeft) {
-				MATRIX.rotate(180, 0, 1, 0);
+			GlStateManager.pushMatrix();
+			if (equip == 0) {
+				GlStateManager.rotate(-yaw, 0, 1, 0);
+				GlStateManager.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
+				GlStateManager.rotate(70, 1, 0, 0);
+				if (isLeft) {
+					GlStateManager.rotate(180, 0, 1, 0);
+				}
+				GlStateManager.scale(0.5F, 0.5F, 0.5F);
+			} else {
+				paletteTransformAnimation(mc, player, yaw, isLeft, mainHand, equip, delta);
 			}
-			MATRIX.scale(0.5F, 0.5F, 0.5F);
-			Matrix4d modelView1 = MATRIX.getTransform();
-			Matrix4d perspective1 = getMatrix(GL11.GL_PROJECTION_MATRIX);
-			float fov = 70;
-			Entity entity = mc.getRenderViewEntity();
-			if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).getHealth() <= 0) {
-				float deathTime = (float) ((EntityLivingBase) entity).deathTime + delta;
-				fov /= (1 - 500 / (deathTime + 500)) * 2 + 1;
-			}
-			IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(mc.theWorld, entity, delta);
-			if (state.getMaterial() == Material.WATER) {
-				fov = fov * 60 / 70;
-			}
-			fov = ForgeHooksClient.getFOVModifier(mc.entityRenderer, entity, state, delta, fov);
-			boolean rightSide = (mainHand ? player.getPrimaryHand() : player.getPrimaryHand().opposite()) == EnumHandSide.RIGHT;
-			float farPlaneDistance = mc.gameSettings.renderDistanceChunks * 16;
-			float walkDelta = player.distanceWalkedModified - player.prevDistanceWalkedModified;
-			float walked = -(player.distanceWalkedModified + walkDelta * delta);
-			float camYaw = player.prevCameraYaw + (player.cameraYaw - player.prevCameraYaw) * delta;
-			float camPitch = player.prevCameraPitch + (player.cameraPitch - player.prevCameraPitch) * delta;
-			float swing = player.getSwingProgress(delta);
-			float thisSwing = mainHand ? swing : 0;
-			float armPitch = player.prevRenderArmPitch + (player.renderArmPitch - player.prevRenderArmPitch) * delta;
-			float armYaw = player.prevRenderArmYaw + (player.renderArmYaw - player.prevRenderArmYaw) * delta;
-			float swingX = -0.4F * MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.PI);
-			float swingY = 0.2F * MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.TAU);
-			float swingZ = -0.2F * MathHelper.sin(thisSwing * Mth.PI);
-			float swingAmt = MathHelper.sin(thisSwing * thisSwing * Mth.PI);
-			float swingAng = MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.PI);
-			int side = rightSide ? 1 : -1;
-			MATRIX.setIdentity();
-			if (mc.gameSettings.anaglyph) {
-				MATRIX.translate(-(EntityRenderer.anaglyphField * 2 - 1) * 0.07F, 0, 0);
-			}
-			MATRIX.perspective(fov, mc.displayWidth / (float) mc.displayHeight, 0.05F, farPlaneDistance * 2);
-			Matrix4d perspective2 = MATRIX.getTransform();
-			MATRIX.setIdentity();
-			if (mc.gameSettings.anaglyph) {
-				MATRIX.translate((EntityRenderer.anaglyphField * 2 - 1) * 0.1F, 0, 0);
-			}
-			MATRIX.translate(MathHelper.sin(walked * Mth.PI) * camYaw * 0.5F, -Math.abs(MathHelper.cos(walked * Mth.PI) * camYaw), 0);
-			MATRIX.rotate(MathHelper.sin(walked * Mth.PI) * camYaw * 3, 0, 0, 1);
-			MATRIX.rotate(Math.abs(MathHelper.cos(walked * Mth.PI - 0.2F) * camYaw) * 5 + camPitch, 1, 0, 0);
-			MATRIX.rotate((player.rotationPitch - armPitch) * 0.1F, 1, 0, 0);
-			MATRIX.rotate((player.rotationYaw - armYaw) * 0.1F, 0, 1, 0);
-			MATRIX.translate(side * swingX + side * 0.56F, swingY - 0.52F, swingZ - 0.72F);
-			MATRIX.rotate(side * (45 + swingAmt * -20), 0, 1, 0);
-			MATRIX.rotate(side * swingAng * -20, 0, 0, 1);
-			MATRIX.rotate(swingAng * -80, 1, 0, 0);
-			MATRIX.rotate(side * -45, 0, 1, 0);
-			Matrix4d modelView2 = MATRIX.getTransform();
-			Matrix4d modelView = interpolate(modelView1, modelView2, equip);
-			Matrix4d perspective = interpolatePerspective(perspective1, perspective2, equip);
-			GlStateManager.loadIdentity();
-			multMatrix(modelView);
-			GlStateManager.matrixMode(GL11.GL_PROJECTION);
-			GlStateManager.loadIdentity();
-			multMatrix(perspective);
-			GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-			mc.getRenderItem().renderItem(stack, TransformType.FIXED);
+			mc.getRenderItem().renderItem(stack, isLeft ? TransformType.FIRST_PERSON_LEFT_HAND : TransformType.FIRST_PERSON_RIGHT_HAND);
 			GlStateManager.popMatrix();
 		}
 		if (rendered) {
 			mc.entityRenderer.disableLightmap();
 		}
+	}
+
+	private void paletteTransformAnimation(Minecraft mc, EntityPlayerSP player, float yaw, boolean isLeft, boolean mainHand, float equip, float delta) {
+		MATRIX.setIdentity();
+		MATRIX.mult(getMatrix(GL11.GL_MODELVIEW_MATRIX));
+		MATRIX.rotate(-yaw, 0, 1, 0);
+		MATRIX.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
+		MATRIX.rotate(70, 1, 0, 0);
+		if (isLeft) {
+			MATRIX.rotate(180, 0, 1, 0);
+		}
+		MATRIX.scale(0.5F, 0.5F, 0.5F);
+		Matrix4d modelView1 = MATRIX.getTransform();
+		Matrix4d perspective1 = getMatrix(GL11.GL_PROJECTION_MATRIX);
+		float fov = 70;
+		Entity entity = mc.getRenderViewEntity();
+		if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).getHealth() <= 0) {
+			float deathTime = ((EntityLivingBase) entity).deathTime + delta;
+			fov /= (1 - 500 / (deathTime + 500)) * 2 + 1;
+		}
+		IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(mc.theWorld, entity, delta);
+		if (state.getMaterial() == Material.WATER) {
+			fov *= 6 / 7F;
+		}
+		fov = ForgeHooksClient.getFOVModifier(mc.entityRenderer, entity, state, delta, fov);
+		float farPlaneDistance = mc.gameSettings.renderDistanceChunks * 16;
+		float walkDelta = player.distanceWalkedModified - player.prevDistanceWalkedModified;
+		float walked = -(player.distanceWalkedModified + walkDelta * delta);
+		float camYaw = player.prevCameraYaw + (player.cameraYaw - player.prevCameraYaw) * delta;
+		float camPitch = player.prevCameraPitch + (player.cameraPitch - player.prevCameraPitch) * delta;
+		float swing = player.getSwingProgress(delta);
+		float thisSwing = mainHand ? swing : 0;
+		float armPitch = player.prevRenderArmPitch + (player.renderArmPitch - player.prevRenderArmPitch) * delta;
+		float armYaw = player.prevRenderArmYaw + (player.renderArmYaw - player.prevRenderArmYaw) * delta;
+		float swingX = -0.4F * MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.PI);
+		float swingY = 0.2F * MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.TAU);
+		float swingZ = -0.2F * MathHelper.sin(thisSwing * Mth.PI);
+		float swingAmt = MathHelper.sin(thisSwing * thisSwing * Mth.PI);
+		float swingAng = MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.PI);
+		int side = isLeft ? -1 : 1;
+		MATRIX.setIdentity();
+		if (mc.gameSettings.anaglyph) {
+			MATRIX.translate(-(EntityRenderer.anaglyphField * 2 - 1) * 0.07F, 0, 0);
+		}
+		MATRIX.perspective(fov, mc.displayWidth / (float) mc.displayHeight, 0.05F, farPlaneDistance * 2);
+		Matrix4d perspective2 = MATRIX.getTransform();
+		MATRIX.setIdentity();
+		if (mc.gameSettings.anaglyph) {
+			MATRIX.translate((EntityRenderer.anaglyphField * 2 - 1) * 0.1F, 0, 0);
+		}
+		MATRIX.translate(MathHelper.sin(walked * Mth.PI) * camYaw * 0.5F, -Math.abs(MathHelper.cos(walked * Mth.PI) * camYaw), 0);
+		MATRIX.rotate(MathHelper.sin(walked * Mth.PI) * camYaw * 3, 0, 0, 1);
+		MATRIX.rotate(Math.abs(MathHelper.cos(walked * Mth.PI - 0.2F) * camYaw) * 5 + camPitch, 1, 0, 0);
+		MATRIX.rotate((player.rotationPitch - armPitch) * 0.1F, 1, 0, 0);
+		MATRIX.rotate((player.rotationYaw - armYaw) * 0.1F, 0, 1, 0);
+		MATRIX.translate(side * swingX + side * 0.56F, swingY - 0.52F, swingZ - 0.72F);
+		MATRIX.rotate(side * (45 + swingAmt * -20), 0, 1, 0);
+		MATRIX.rotate(side * swingAng * -20, 0, 0, 1);
+		MATRIX.rotate(swingAng * -80, 1, 0, 0);
+		MATRIX.rotate(side * -45, 0, 1, 0);
+		Matrix4d modelView2 = MATRIX.getTransform();
+		Matrix4d modelView = interpolate(modelView1, modelView2, equip);
+		Matrix4d perspective = interpolatePerspective(perspective1, perspective2, equip);
+		GlStateManager.matrixMode(GL11.GL_PROJECTION);
+		GlStateManager.loadIdentity();
+		multMatrix(perspective);
+		GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+		GlStateManager.loadIdentity();
+		multMatrix(modelView);
 	}
 
 	private static final FloatBuffer MATRIX_BUF = BufferUtils.createFloatBuffer(16);
@@ -444,17 +462,62 @@ public class ClientProxy extends CommonProxy {
 		b.get(bTrans);
 		double aScale = a.getScale(); // only a uniform scale is used the rendering so this'll do
 		double bScale = b.getScale();
-		aRot.interpolate(bRot, t);
+		Quat4d rot = slerp(aRot, bRot, t);
 		aTrans.interpolate(bTrans, t);
 		double scale = interpolate(aScale, bScale, t);
 		Matrix4d mat = new Matrix4d();
 		mat.set(aTrans);
 		Matrix4d scratch = new Matrix4d();
-		scratch.set(aRot);
+		scratch.set(rot);
 		mat.mul(scratch);
 		scratch.set(scale);
 		mat.mul(scratch);
 		return mat;
+	}
+
+	/*
+	 * http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
+	 */
+	private static Quat4d slerp(Quat4d qa, Quat4d qb, double t) {
+		// quaternion to return
+		Quat4d qm = new Quat4d();
+		// Calculate angle between them.
+		double cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
+		if (cosHalfTheta < 0) {
+			qb.w = -qb.w;
+			qb.x = -qb.x;
+			qb.y = -qb.y;
+			qb.z = qb.z;
+			cosHalfTheta = -cosHalfTheta;
+		}
+		// if qa=qb or qa=-qb then theta = 0 and we can return qa
+		if (Math.abs(cosHalfTheta) >= 1) {
+			qm.w = qa.w;
+			qm.x = qa.x;
+			qm.y = qa.y;
+			qm.z = qa.z;
+			return qm;
+		}
+		// Calculate temporary values.
+		double halfTheta = Math.acos(cosHalfTheta);
+		double sinHalfTheta = Math.sqrt(1 - cosHalfTheta * cosHalfTheta);
+		// if theta = 180 degrees then result is not fully defined
+		// we could rotate around any axis normal to qa or qb
+		if (Math.abs(sinHalfTheta) < 0.001) {
+			qm.w = qa.w * 0.5 + qb.w * 0.5;
+			qm.x = qa.x * 0.5 + qb.x * 0.5;
+			qm.y = qa.y * 0.5 + qb.y * 0.5;
+			qm.z = qa.z * 0.5 + qb.z * 0.5;
+			return qm;
+		}
+		double ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta;
+		double ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
+		// calculate Quaternion.
+		qm.w = qa.w * ratioA + qb.w * ratioB;
+		qm.x = qa.x * ratioA + qb.x * ratioB;
+		qm.y = qa.y * ratioA + qb.y * ratioB;
+		qm.z = qa.z * ratioA + qb.z * ratioB;
+		return qm;
 	}
 
 	private static Matrix4d interpolatePerspective(Matrix4d a, Matrix4d b, double t) {
@@ -485,29 +548,27 @@ public class ClientProxy extends CommonProxy {
 		return a + (b - a) * t;
 	}
 
-	@SubscribeEvent
-	public void renderSpecificHand(RenderSpecificHandEvent event) {
-		if (shouldShowInteractivePalette(Minecraft.getMinecraft().thePlayer, event.getHand())) {
-			event.setCanceled(true);
-		}
-	}
-
 	private boolean shouldShowInteractivePalette(EntityPlayer player, EnumHand hand) {
 		ItemRenderer renderer = Minecraft.getMinecraft().getItemRenderer();
 		ItemStack held, other;
-		float ep;
+		float thisPrevEP, thisEP, otherPrevEP, otherEP;
 		if (hand == EnumHand.MAIN_HAND) {
 			held = renderer.itemStackMainHand;
 			other = renderer.itemStackOffHand;
-			ep = renderer.equippedProgressOffHand;
+			thisPrevEP = renderer.prevEquippedProgressMainHand;
+			thisEP = renderer.equippedProgressMainHand;
+			otherPrevEP = renderer.prevEquippedProgressOffHand;
+			otherEP = renderer.equippedProgressOffHand;
 		} else {
 			held = renderer.itemStackOffHand;
 			other = renderer.itemStackMainHand;
-			ep = renderer.equippedProgressMainHand;
+			thisPrevEP = renderer.prevEquippedProgressOffHand;
+			thisEP = renderer.equippedProgressOffHand;
+			otherPrevEP = renderer.prevEquippedProgressMainHand;
+			otherEP = renderer.equippedProgressMainHand;
 		}
-//		System.out.println(held);
 		if (held != null && held.getItem() == PaintThis.palette) {
-			return other != null && other.getItem() instanceof ItemBrush && ep > 0;
+			return other != null && other.getItem() instanceof ItemBrush;
 		}
 		return false;
 	}
