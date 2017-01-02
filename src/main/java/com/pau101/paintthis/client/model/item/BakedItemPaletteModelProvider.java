@@ -1,24 +1,29 @@
 package com.pau101.paintthis.client.model.item;
 
+import java.util.Collections;
 import java.util.List;
-
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.renderer.vertex.VertexFormat;
-import net.minecraft.client.resources.model.IBakedModel;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.EnumFacing;
-import net.minecraftforge.client.model.IFlexibleBakedModel;
-import net.minecraftforge.client.model.ISmartItemModel;
-import net.minecraftforge.client.model.TRSRTransformation;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.pau101.paintthis.dye.Dye;
 
-public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmartItemModel {
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType;
+import net.minecraft.client.renderer.block.model.ItemOverrideList;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.vertex.VertexFormat;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumFacing;
+import net.minecraft.world.World;
+import net.minecraftforge.common.model.TRSRTransformation;
+
+public class BakedItemPaletteModelProvider implements IBakedModel {
+	private final ItemOverrideList override = new Provider();
+
 	private final BakedItemPaletteModel[] models = new BakedItemPaletteModel[256];
 
 	private final ImmutableList<ImmutableList<BakedQuad>> quads;
@@ -37,13 +42,8 @@ public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmar
 	}
 
 	@Override
-	public List<BakedQuad> getFaceQuads(EnumFacing facing) {
-		return ImmutableList.of();
-	}
-
-	@Override
-	public List<BakedQuad> getGeneralQuads() {
-		return ImmutableList.of();
+	public List<BakedQuad> getQuads(IBlockState state, EnumFacing side, long rand) {
+		return Collections.EMPTY_LIST;
 	}
 
 	@Override
@@ -71,27 +71,6 @@ public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmar
 		return ItemCameraTransforms.DEFAULT;
 	}
 
-	@Override
-	public VertexFormat getFormat() {
-		return format;
-	}
-
-	@Override
-	public IBakedModel handleItemState(ItemStack stack) {
-		int index = getModelIndex(stack);
-		if (models[index] == null) {
-			ImmutableList.Builder<BakedQuad> quads = ImmutableList.builder();
-			quads.addAll(this.quads.get(0));
-			for (int i = 0; i < 8; i++) {
-				if ((index & 1 << i) != 0) {
-					quads.addAll(this.quads.get(i + 1));
-				}
-			}
-			models[index] = new BakedItemPaletteModel(quads.build(), particle, format, transforms, null);
-		}
-		return models[index];
-	}
-
 	private static int getModelIndex(ItemStack stack) {
 		int index = 0;
 		if (stack.hasTagCompound()) {
@@ -103,5 +82,32 @@ public class BakedItemPaletteModelProvider implements IFlexibleBakedModel, ISmar
 			}
 		}
 		return index;
+	}
+
+	@Override
+	public ItemOverrideList getOverrides() {
+		return override;
+	}
+
+	private class Provider extends ItemOverrideList {
+		public Provider() {
+			super(Collections.EMPTY_LIST);
+		}
+
+		@Override
+		public IBakedModel handleItemState(IBakedModel model, ItemStack stack, World world, EntityLivingBase entity) {
+			int index = getModelIndex(stack);
+			if (models[index] == null) {
+				ImmutableList.Builder<BakedQuad> quads = ImmutableList.builder();
+				quads.addAll(BakedItemPaletteModelProvider.this.quads.get(0));
+				for (int i = 0; i < 8; i++) {
+					if ((index & 1 << i) != 0) {
+						quads.addAll(BakedItemPaletteModelProvider.this.quads.get(i + 1));
+					}
+				}
+				models[index] = new BakedItemPaletteModel(quads.build(), particle, format, transforms, null);
+			}
+			return models[index];
+		}
 	}
 }

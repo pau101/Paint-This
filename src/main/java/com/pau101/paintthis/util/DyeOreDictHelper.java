@@ -18,7 +18,7 @@ public class DyeOreDictHelper {
 
 	public static boolean isDye(ItemStack stack) {
 		if (stack != null) {
-			if (stack.getItem() == Items.dye) {
+			if (stack.getItem() == Items.DYE) {
 				return true;
 			}
 			initDyeItemStacks();
@@ -33,7 +33,7 @@ public class DyeOreDictHelper {
 
 	public static int getDyeDamage(ItemStack stack) {
 		if (stack != null) {
-			if (stack.getItem() == Items.dye) {
+			if (stack.getItem() == Items.DYE) {
 				return stack.getMetadata();
 			}
 			initDyeItemStacks();

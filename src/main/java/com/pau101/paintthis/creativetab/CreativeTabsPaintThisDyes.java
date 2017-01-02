@@ -3,6 +3,8 @@ package com.pau101.paintthis.creativetab;
 import java.util.Collections;
 import java.util.List;
 
+import com.pau101.paintthis.dye.Dye;
+
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -10,8 +12,6 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
-
-import com.pau101.paintthis.dye.Dye;
 
 public class CreativeTabsPaintThisDyes extends CreativeTabsPaintThis {
 	private static final int ITEM_SECONDS = 3;
@@ -34,7 +34,7 @@ public class CreativeTabsPaintThisDyes extends CreativeTabsPaintThis {
 
 	@Override
 	public Item getTabIconItem() {
-		return Items.dye;
+		return Items.DYE;
 	}
 
 	@Override
@@ -43,11 +43,11 @@ public class CreativeTabsPaintThisDyes extends CreativeTabsPaintThis {
 	}
 
 	@Override
-	public void displayAllReleventItems(List<ItemStack> stacks) {
-		Items.dye.getSubItems(Items.dye, this, stacks);
+	public void displayAllRelevantItems(List<ItemStack> stacks) {
+		Items.DYE.getSubItems(Items.DYE, this, stacks);
 		// Reverse the vanilla dyes so they follow enum
 		Collections.reverse(stacks);
-		super.displayAllReleventItems(stacks);
+		super.displayAllRelevantItems(stacks);
 	}
 
 	@SubscribeEvent

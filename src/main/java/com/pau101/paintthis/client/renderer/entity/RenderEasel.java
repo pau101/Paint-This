@@ -10,7 +10,7 @@ import com.pau101.paintthis.client.model.entity.ModelEasel;
 import com.pau101.paintthis.entity.item.EntityEasel;
 
 public class RenderEasel extends Render<EntityEasel> {
-	private static final ResourceLocation TEXTURE = new ResourceLocation(PaintThis.MODID, "textures/entity/easel.png");
+	private static final ResourceLocation TEXTURE = new ResourceLocation(PaintThis.ID, "textures/entity/easel.png");
 
 	private ModelEasel model = new ModelEasel();
 

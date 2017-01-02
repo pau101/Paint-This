@@ -12,7 +12,7 @@ import com.pau101.paintthis.painting.Painting;
 
 public class RecipeCanvas extends ShapedOreRecipe implements PaintThisRecipe {
 	public RecipeCanvas() {
-		super(new ItemStack(PaintThis.canvas, 4), "SSS", "TWT", "SSS", 'S', "stickWood", 'T', Items.string, 'W', Blocks.wool);
+		super(new ItemStack(PaintThis.canvas, 4), "SSS", "TWT", "SSS", 'S', "stickWood", 'T', Items.STRING, 'W', Blocks.WOOL);
 	}
 
 	@Override

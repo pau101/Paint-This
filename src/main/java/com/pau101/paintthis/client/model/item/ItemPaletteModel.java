@@ -1,6 +1,5 @@
 package com.pau101.paintthis.client.model.item;
 
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Arrays;
@@ -10,9 +9,18 @@ import java.util.Collection;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Closeables;
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.item.ItemPalette;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
 import net.minecraft.client.renderer.block.model.ModelBlock;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.renderer.vertex.VertexFormat;
@@ -21,50 +29,89 @@ import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.model.ICustomModelLoader;
-import net.minecraftforge.client.model.IFlexibleBakedModel;
 import net.minecraftforge.client.model.IModel;
-import net.minecraftforge.client.model.IModelPart;
-import net.minecraftforge.client.model.IModelState;
 import net.minecraftforge.client.model.IPerspectiveAwareModel;
-import net.minecraftforge.client.model.TRSRTransformation;
 import net.minecraftforge.client.model.pipeline.UnpackedBakedQuad;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.pau101.paintthis.PaintThis;
+import net.minecraftforge.common.model.IModelPart;
+import net.minecraftforge.common.model.IModelState;
+import net.minecraftforge.common.model.TRSRTransformation;
 
 public class ItemPaletteModel implements IModel {
+	public static byte[] dyeRegions;
+
+	public static int textureSize = -1;
+
+	public static RuntimeException failCause;
+
 	private final ImmutableList<ResourceLocation> textures;
 
-	private final ImmutableMap<TransformType, TRSRTransformation> transforms;
+	private final ItemCameraTransforms transforms;
 
-	public ItemPaletteModel(ImmutableList<ResourceLocation> textures, ImmutableMap<TransformType, TRSRTransformation> transforms) {
+	public ItemPaletteModel(ImmutableList<ResourceLocation> textures, ItemCameraTransforms transforms) {
 		this.textures = textures;
 		this.transforms = transforms;
 	}
 
-	private static ImmutableList<ResourceLocation> getTextures(ModelBlock model) {
-		ImmutableList.Builder<ResourceLocation> builder = ImmutableList.builder();
-		for (int i = 0; model.isTexturePresent("layer" + i); i++) {
-			builder.add(new ResourceLocation(model.resolveTextureName("layer" + i)));
+	@Override
+	public IBakedModel bake(IModelState state, VertexFormat format, Function<ResourceLocation, TextureAtlasSprite> bakedTextureGetter) {
+		ImmutableList.Builder<ImmutableList<BakedQuad>> builder = ImmutableList.builder();
+		int[][] layers = new int[ItemPalette.DYE_COUNT][];
+		failCause = null;
+		if (textures.size() <= ItemPalette.DYE_COUNT) {
+			failCause = new IllegalArgumentException("Nine textures are needed for the palette, first being the empty palette, then one for each dye location.");
+		} else {
+			try {
+				buildLayers(state, format, bakedTextureGetter, builder, layers);
+			} catch (RuntimeException e) {
+				failCause = e;
+			}
 		}
-		return builder.build();
+		if (failCause != null) {
+			textureSize = -1;
+			dyeRegions = null;
+		} else {
+			generateDyeRegions(layers);
+		}
+		TextureAtlasSprite particle = bakedTextureGetter.apply(textures.isEmpty() ? new ResourceLocation("missingno") : textures.get(0));
+		return new BakedItemPaletteModelProvider(builder.build(), particle, format, IPerspectiveAwareModel.MapWrapper.getTransforms(transforms));
 	}
 
-	@Override
-	public IFlexibleBakedModel bake(IModelState state, VertexFormat format, Function<ResourceLocation, TextureAtlasSprite> bakedTextureGetter) {
-		ImmutableList.Builder<ImmutableList<BakedQuad>> builder = ImmutableList.builder();
+	private void buildLayers(IModelState state, VertexFormat format, Function<ResourceLocation, TextureAtlasSprite> bakedTextureGetter, ImmutableList.Builder<ImmutableList<BakedQuad>> builder, int[][] layers) {
 		Optional<TRSRTransformation> transform = state.apply(Optional.<IModelPart> absent());
+		textureSize = -1;
 		for (int i = 0; i < textures.size(); i++) {
 			TextureAtlasSprite sprite = bakedTextureGetter.apply(textures.get(i));
 			builder.add(getQuadsForSprite(i, sprite, format, transform));
+			if (failCause == null && i > 0 && i <= ItemPalette.DYE_COUNT) {
+				if (sprite.getIconWidth() != sprite.getIconHeight()) {
+					failCause = new IllegalArgumentException("Non-square dye overlay dimensions for \"" + sprite.getIconName() + "\", " + sprite.getIconWidth() + "x" + sprite.getIconHeight());
+				} else if (textureSize == -1) {
+					textureSize = sprite.getIconWidth();
+				} else if (textureSize != sprite.getIconWidth()) {
+					failCause = new IllegalArgumentException("Inconsistant dye overlay dimensions, one is " + textureSize + " and another is " + sprite.getIconWidth());
+				} else if (sprite.getFrameCount() == 0) {
+					failCause = new IllegalArgumentException("Missing frames for dye overlay \"" + sprite.getIconName() + "\"");
+				}
+				layers[i - 1] = sprite.getFrameTextureData(0)[0];
+			}
 		}
-		TextureAtlasSprite particle = bakedTextureGetter.apply(textures.isEmpty() ? new ResourceLocation("missingno") : textures.get(0));
-		return new BakedItemPaletteModelProvider(builder.build(), particle, format, transforms);
+	}
+
+	private void generateDyeRegions(int[][] layers) {
+		int area = textureSize * textureSize;
+		if (dyeRegions == null || dyeRegions.length != area) {
+			dyeRegions = new byte[area];
+		}
+		for (int i = 0; i < layers.length; i++) {
+			int[] layer = layers[i];
+			for (int n = 0; n < area; n++) {
+				if (layer[n] >>> 24 > 127) {
+					dyeRegions[n] |= (1 << i);	
+				} else {
+					dyeRegions[n] &= ~(1 << i);
+				}
+			}
+		}
 	}
 
 	@Override
@@ -282,34 +329,36 @@ public class ItemPaletteModel implements IModel {
 
 		@Override
 		public boolean accepts(ResourceLocation modelLocation) {
-			return modelLocation.getResourceDomain().equals(PaintThis.MODID) && modelLocation.getResourcePath().equals("models/item/palette");
+			return modelLocation.getResourceDomain().equals(PaintThis.ID) && modelLocation.getResourcePath().equals("models/item/palette");
 		}
 
 		@Override
-		public IModel loadModel(ResourceLocation modelLocation) {
-			IModel model = null;
+		public IModel loadModel(ResourceLocation modelLocation) throws Exception {
+			ResourceLocation path = new ResourceLocation(modelLocation.toString() + ".json");
+			IResource iresource = Minecraft.getMinecraft().getResourceManager().getResource(path);
+			Reader reader = null;
+			ModelBlock modelBlock;
 			try {
-				ResourceLocation path = new ResourceLocation(modelLocation.toString() + ".json");
-				IResource iresource = Minecraft.getMinecraft().getResourceManager().getResource(path);
-				Reader reader = new InputStreamReader(iresource.getInputStream(), Charsets.UTF_8);
-				ModelBlock modelBlock;
-				try {
-					modelBlock = ModelBlock.deserialize(reader);
-					modelBlock.name = modelBlock.toString();
-				} finally {
-					reader.close();
-				}
-				ImmutableList.Builder<ResourceLocation> builder = ImmutableList.builder();
-				int layer = 0;
-				String tex;
-				while ((tex = modelBlock.textures.get("layer" + layer++)) != null) {
-					builder.add(new ResourceLocation(tex));
-				}
-				model = new ItemPaletteModel(builder.build(), IPerspectiveAwareModel.MapWrapper.getTransforms(modelBlock.func_181682_g()));
-			} catch (IOException e) {
-				Throwables.propagate(e);
+				reader = new InputStreamReader(iresource.getInputStream(), Charsets.UTF_8);
+				modelBlock = ModelBlock.deserialize(reader);
+				modelBlock.name = modelBlock.toString();
+			} finally {
+				Closeables.closeQuietly(reader);
 			}
-			return model;
+			ImmutableList.Builder<ResourceLocation> builder = ImmutableList.builder();
+			int texLayer = 0;
+			String tex;
+			while ((tex = modelBlock.textures.get("layer" + texLayer++)) != null) {
+				builder.add(new ResourceLocation(tex));
+			}
+			ImmutableList<ResourceLocation> rls = builder.build();
+			return new ItemPaletteModel(rls, modelBlock.getAllTransforms());
+		}
+	}
+
+	public static class BadPaletteModelException extends RuntimeException {
+		public BadPaletteModelException(Throwable cause) {
+			super(cause);
 		}
 	}
 }

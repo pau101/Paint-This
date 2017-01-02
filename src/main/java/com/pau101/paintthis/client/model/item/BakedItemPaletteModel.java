@@ -1,25 +1,30 @@
 package com.pau101.paintthis.client.model.item;
 
+import java.util.Collections;
 import java.util.List;
 
 import javax.vecmath.Matrix4f;
-
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
-import net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.renderer.vertex.VertexFormat;
-import net.minecraft.util.EnumFacing;
-import net.minecraftforge.client.model.IFlexibleBakedModel;
-import net.minecraftforge.client.model.IPerspectiveAwareModel;
-import net.minecraftforge.client.model.TRSRTransformation;
 
 import org.apache.commons.lang3.tuple.Pair;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-public class BakedItemPaletteModel implements IFlexibleBakedModel, IPerspectiveAwareModel {
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.block.model.IBakedModel;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms;
+import net.minecraft.client.renderer.block.model.ItemCameraTransforms.TransformType;
+import net.minecraft.client.renderer.block.model.ItemOverrideList;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.vertex.VertexFormat;
+import net.minecraft.util.EnumFacing;
+import net.minecraftforge.client.model.IPerspectiveAwareModel;
+import net.minecraftforge.common.model.TRSRTransformation;
+
+public class BakedItemPaletteModel implements IBakedModel, IPerspectiveAwareModel {
+	private final IBakedModel firstPersonInvisible = new BlankModel();
+
 	private final ImmutableList<BakedQuad> quads;
 
 	private final TextureAtlasSprite particle;
@@ -53,12 +58,7 @@ public class BakedItemPaletteModel implements IFlexibleBakedModel, IPerspectiveA
 	}
 
 	@Override
-	public List<BakedQuad> getFaceQuads(EnumFacing facing) {
-		return ImmutableList.of();
-	}
-
-	@Override
-	public List<BakedQuad> getGeneralQuads() {
+	public List<BakedQuad> getQuads(IBlockState state, EnumFacing side, long rand) {
 		return quads;
 	}
 
@@ -88,18 +88,57 @@ public class BakedItemPaletteModel implements IFlexibleBakedModel, IPerspectiveA
 	}
 
 	@Override
-	public VertexFormat getFormat() {
-		return format;
-	}
-
-	@Override
-	public Pair<? extends IFlexibleBakedModel, Matrix4f> handlePerspective(TransformType type) {
-		Pair<? extends IFlexibleBakedModel, Matrix4f> pair = IPerspectiveAwareModel.MapWrapper.handlePerspective(this, transforms, type);
+	public Pair<? extends IBakedModel, Matrix4f> handlePerspective(TransformType type) {
+		Pair<? extends IBakedModel, Matrix4f> pair = MapWrapper.handlePerspective(this, transforms, type);
 		if (type == TransformType.GUI && !isCulled && pair.getRight() == null) {
 			return Pair.of(otherModel, null);
 		} else if (type != TransformType.GUI && isCulled) {
 			return Pair.of(otherModel, pair.getRight());
 		}
 		return pair;
+	}
+
+	@Override
+	public ItemOverrideList getOverrides() {
+		return ItemOverrideList.NONE;
+	}
+
+	private final class BlankModel implements IBakedModel {
+		private BlankModel() {}
+	
+		@Override
+		public List<BakedQuad> getQuads(IBlockState state, EnumFacing side, long rand) {
+			return Collections.EMPTY_LIST;
+		}
+
+		@Override
+		public boolean isAmbientOcclusion() {
+			return false;
+		}
+
+		@Override
+		public boolean isGui3d() {
+			return false;
+		}
+
+		@Override
+		public boolean isBuiltInRenderer() {
+			return false;
+		}
+
+		@Override
+		public TextureAtlasSprite getParticleTexture() {
+			return particle;
+		}
+
+		@Override
+		public ItemCameraTransforms getItemCameraTransforms() {
+			return ItemCameraTransforms.DEFAULT;
+		}
+
+		@Override
+		public ItemOverrideList getOverrides() {
+			return ItemOverrideList.NONE;
+		}
 	}
 }

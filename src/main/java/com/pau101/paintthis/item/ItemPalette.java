@@ -1,19 +1,14 @@
 package com.pau101.paintthis.item;
 
-import java.util.Arrays;
 import java.util.List;
 
+import com.pau101.paintthis.dye.Dye;
+
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.StatCollector;
-import net.minecraft.world.World;
-
-import com.pau101.paintthis.dye.Dye;
-import com.pau101.paintthis.item.brush.ItemBrush;
+import net.minecraft.util.text.translation.I18n;
 
 public class ItemPalette extends Item {
 	public static final int DYE_COUNT = 8;
@@ -23,61 +18,21 @@ public class ItemPalette extends Item {
 	}
 
 	@Override
-	public int getColorFromItemStack(ItemStack stack, int renderPass) {
-		if (renderPass > 0 && stack.hasTagCompound()) {
-			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
-			byte dye;
-			if (dyes.length == DYE_COUNT && (dye = dyes[renderPass - 1]) != Dye.NO_DYE) {
-				return Dye.getDyeFromByte(dye).getColor();
-			}
-		}
-		return super.getColorFromItemStack(stack, renderPass);
-	}
-
-	@Override
 	public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced) {
 		if (stack.hasTagCompound()) {
 			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
 			for (int i = 0; i < dyes.length; i++) {
 				if (dyes[i] != Dye.NO_DYE) {
-					tooltip.add(StatCollector.translateToLocal(Dye.getDyeFromByte(dyes[i]).getCompleteUnlocalizedName()));
+					tooltip.add(I18n.translateToLocal(Dye.getDyeFromByte(dyes[i]).getCompleteUnlocalizedName()));
 				}
 			}
 		}
-	}
-
-	@Override
-	public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
-		if (!world.isRemote && hasDyes(stack)) {
-			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
-			for (int s = player.inventory.currentItem + 1; s < InventoryPlayer.getHotbarSize(); s++) {
-				ItemStack barStack = player.inventory.getStackInSlot(s);
-				if (barStack != null && barStack.getItem() instanceof ItemBrush) {
-					int from = ItemBrush.getDyeIndex(barStack);
-					int dyeIndex = findNextDye(dyes, from + 1);
-					ItemBrush.setDyeIndex(barStack, dyeIndex);
-					Dye newDye = Dye.getDyeFromByte(dyes[dyeIndex]);
-					barStack.setItemDamage(newDye.getBrushValue());
-					((EntityPlayerMP) player).sendContainerToPlayer(player.inventoryContainer);
-					break;
-				}
-			}
-		}
-		return stack;
-	}
-
-	private static int findNextDye(byte[] dyes, int from) {
-		for (int i = 0; i < dyes.length; i++) {
-			int dyeIndex = (i + from) % dyes.length;
-			byte dye = dyes[dyeIndex];
-			if (dye != Dye.NO_DYE) {
-				return dyeIndex;
-			}
-		}
-		throw new IllegalStateException("Couldn't find next dye!? " + Arrays.toString(dyes) + " " + from);
 	}
 
 	public static boolean hasDyes(ItemStack stack) {
+		if (stack == null) {
+			return false;
+		}
 		NBTTagCompound compound = stack.getTagCompound();
 		if (compound == null) {
 			return false;
@@ -108,5 +63,18 @@ public class ItemPalette extends Item {
 				stack.setTagCompound(null);
 			}
 		}
+	}
+
+	public static Dye getDye(ItemStack stack, int index) {
+		NBTTagCompound compound = stack.getTagCompound();
+		if (compound == null) {
+			return null;
+		}
+		byte[] dyes = compound.getByteArray("dyes");
+		if (dyes.length != DYE_COUNT) {
+			return null;
+		}
+		byte val = dyes[index];
+		return val == Dye.NO_DYE ? null : Dye.getDyeFromByte(val);
 	}
 }

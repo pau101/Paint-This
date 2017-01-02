@@ -1,23 +1,31 @@
 package com.pau101.paintthis.entity.item;
 
+import java.util.Collections;
+
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.painting.Painting;
+import com.pau101.paintthis.sound.PTSounds;
+import com.pau101.paintthis.util.Mth;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.projectile.EntityArrow;
 import net.minecraft.init.Blocks;
+import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.BlockPos;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.EnumHandSide;
 import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.SoundEvent;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.painting.Painting;
-import com.pau101.paintthis.util.Mth;
 
 public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSpawnData {
 	private static final double RENDER_DISTANCE = 256;
@@ -46,18 +54,18 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 	}
 
 	@Override
-	protected String getDeathSound() {
-		return PaintThis.MODID + ":entity.easel.break";
+	protected SoundEvent getDeathSound() {
+		return PTSounds.EASEL_BREAK;
 	}
 
 	@Override
-	protected String getFallSoundString(int damageValue) {
-		return PaintThis.MODID + ":entity.easel.fall";
+	protected SoundEvent getFallSound(int damage) {
+		return PTSounds.EASEL_FALL;
 	}
 
 	@Override
-	protected String getHurtSound() {
-		return PaintThis.MODID + ":entity.easel.hit";
+	protected SoundEvent getHurtSound() {
+		return PTSounds.EASEL_HIT;
 	}
 
 	@Override
@@ -69,12 +77,11 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 	}
 
 	@Override
-	public boolean interactFirst(EntityPlayer player) {
-		ItemStack heldStack = player.getHeldItem();
-		if (!(riddenByEntity instanceof EntityCanvas) && Painting.isPainting(heldStack) && canSupportPainting(heldStack)) {
+	public boolean processInitialInteract(EntityPlayer player, ItemStack heldStack, EnumHand hand) {
+		if (!(getControllingPassenger() instanceof EntityCanvas) && Painting.isPainting(heldStack) && canSupportPainting(heldStack)) {
 			if (!worldObj.isRemote) {
 				EntityCanvas canvas = new EntityCanvas(worldObj, heldStack.copy(), true);
-				canvas.mountEntity(this);
+				canvas.startRiding(this);
 				positionCanvas(canvas);
 				worldObj.spawnEntityInWorld(canvas);
 				canvas.onCreated();
@@ -116,15 +123,21 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 		return false;
 	}
 
+	@Override
+	public Entity getControllingPassenger() {
+		return getPassengers().isEmpty() ? null : getPassengers().get(0);
+	}
+
 	private void attackEntityFrom(DamageSource source, boolean isArrow, boolean isPlayer) {
 		if (source.getSourceOfDamage() instanceof EntityArrow) {
 			source.getSourceOfDamage().setDead();
 		}
 		if (!(source.getEntity() instanceof EntityPlayer) || ((EntityPlayer) source.getEntity()).capabilities.allowEdit) {
-			if (riddenByEntity instanceof EntityCanvas) {
+			Entity entity = getControllingPassenger();
+			if (entity instanceof EntityCanvas) {
 				if (!worldObj.isRemote) {
-					riddenByEntity.setDead();
-					((EntityCanvas) riddenByEntity).dropCanvas((EntityPlayer) (source.getSourceOfDamage() instanceof EntityPlayer ? source.getSourceOfDamage() : null));
+					entity.setDead();
+					((EntityCanvas) entity).dropCanvas((EntityPlayer) (source.getSourceOfDamage() instanceof EntityPlayer ? source.getSourceOfDamage() : null));
 				}
 			} else {
 				if (source.isCreativePlayer()) {
@@ -146,11 +159,11 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 	}
 
 	@Override
-	public void updateRiderPosition() {
-		if (riddenByEntity instanceof EntityCanvas) {
-			positionCanvas((EntityCanvas) riddenByEntity);
+	public void updatePassenger(Entity passenger) {
+		if (passenger instanceof EntityCanvas) {
+			positionCanvas((EntityCanvas) passenger);
 		} else {
-			super.updateRiderPosition();
+			super.updatePassenger(passenger);	
 		}
 	}
 
@@ -172,7 +185,7 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 
 	private void animateBreaking() {
 		if (worldObj instanceof WorldServer) {
-			((WorldServer) worldObj).spawnParticle(EnumParticleTypes.BLOCK_DUST, posX, posY + height / 1.5, posZ, 10, width / 4, height / 4, width / 4, 0.05, Block.getStateId(Blocks.planks.getDefaultState()));
+			((WorldServer) worldObj).spawnParticle(EnumParticleTypes.BLOCK_DUST, posX, posY + height / 1.5, posZ, 10, width / 4, height / 4, width / 4, 0.05, Block.getStateId(Blocks.PLANKS.getDefaultState()));
 		}
 		playSound(getDeathSound(), 0.7F + rand.nextFloat() * 0.2F, 0.8F + rand.nextFloat() * 0.3F);
 	}
@@ -206,25 +219,21 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 	}
 
 	@Override
-	public ItemStack getHeldItem() {
+	public Iterable<ItemStack> getArmorInventoryList() {
+		return Collections.EMPTY_LIST;
+	}
+
+	@Override
+	public ItemStack getItemStackFromSlot(EntityEquipmentSlot slotIn) {
 		return null;
 	}
 
 	@Override
-	public ItemStack getEquipmentInSlot(int slot) {
-		return null;
+	public void setItemStackToSlot(EntityEquipmentSlot slot, ItemStack stack) {
 	}
 
 	@Override
-	public ItemStack getCurrentArmor(int slot) {
-		return null;
-	}
-
-	@Override
-	public void setCurrentItemOrArmor(int slotIn, ItemStack stack) {}
-
-	@Override
-	public ItemStack[] getInventory() {
-		return INVENTORY;
+	public EnumHandSide getPrimaryHand() {
+		return EnumHandSide.RIGHT;
 	}
 }

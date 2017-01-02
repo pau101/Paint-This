@@ -2,19 +2,21 @@ package com.pau101.paintthis.item;
 
 import java.util.List;
 
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.painting.Painting;
+
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.BlockPos;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
-import net.minecraft.util.StatCollector;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
-
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.painting.Painting;
 
 public class ItemCanvas extends Item {
 	public ItemCanvas() {
@@ -30,9 +32,9 @@ public class ItemCanvas extends Item {
 		int height = Painting.getPaintingHeight(stack);
 		if (width > 0 && height > 0) {
 			if (stack.getMetadata() != 0) {
-				canvas = StatCollector.translateToLocal("item.painting.name");
+				canvas = I18n.translateToLocal("item.painting.name");
 			}
-			canvas = StatCollector.translateToLocalFormatted("item.canvas.size", width, height, canvas);
+			canvas = I18n.translateToLocalFormatted("item.canvas.size", width, height, canvas);
 		}
 		return canvas;
 	}
@@ -49,14 +51,15 @@ public class ItemCanvas extends Item {
 	}
 
 	@Override
-	public boolean onItemUse(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX, float hitY, float hitZ) {
+	public EnumActionResult onItemUse(ItemStack stack, EntityPlayer player, World world, BlockPos pos, EnumHand hand, EnumFacing side, float hitX, float hitY, float hitZ) {
 		if (side.getAxis() == Axis.Y) {
-			return false;
+			return EnumActionResult.FAIL;
 		}
 		BlockPos hangingPosition = pos.offset(side);
 		if (!player.canPlayerEdit(hangingPosition, side, stack)) {
-			return false;
-		} else if (Painting.isPainting(stack)) {
+			return EnumActionResult.FAIL;
+		}
+		if (Painting.isPainting(stack)) {
 			EntityCanvas canvas = new EntityCanvas(world, stack.copy(), false, hangingPosition, side);
 			if (canvas.onValidSurface() || canvas.doALittleJigToValidSurface()) {
 				if (!world.isRemote) {
@@ -65,8 +68,8 @@ public class ItemCanvas extends Item {
 				}
 				stack.stackSize--;
 			}
-			return true;
+			return EnumActionResult.SUCCESS;
 		}
-		return false;
+		return EnumActionResult.FAIL;
 	}
 }

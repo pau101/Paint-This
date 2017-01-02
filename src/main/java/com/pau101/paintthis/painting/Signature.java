@@ -2,12 +2,12 @@ package com.pau101.paintthis.painting;
 
 import java.util.UUID;
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Vec3;
-
 import com.pau101.paintthis.dye.Dye;
 import com.pau101.paintthis.util.nbtassist.NBTProperty;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.math.Vec3d;
 
 public class Signature {
 	@NBTProperty
@@ -69,7 +69,7 @@ public class Signature {
 		LEFT,
 		RIGHT;
 
-		public static Side forHit(Vec3 hit) {
+		public static Side forHit(Vec3d hit) {
 			if (hit.xCoord < 0.5F) {
 				return LEFT;
 			}

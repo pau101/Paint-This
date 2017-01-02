@@ -1,36 +1,42 @@
 package com.pau101.paintthis.entity.item;
 
-import io.netty.buffer.ByteBuf;
-
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.painting.Painting;
+import com.pau101.paintthis.painting.Signature;
+import com.pau101.paintthis.sound.PTSounds;
+import com.pau101.paintthis.util.Mth;
+import com.pau101.paintthis.util.Util;
+import com.pau101.paintthis.util.nbtassist.NBTAssist;
+import com.pau101.paintthis.util.nbtassist.NBTMutatorProperty;
+import com.pau101.paintthis.util.nbtassist.NBTProperty;
+
+import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRedstoneDiode;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.BlockPos;
+import net.minecraft.network.datasync.DataParameter;
+import net.minecraft.network.datasync.DataSerializers;
+import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumFacing.Axis;
-import net.minecraft.util.MathHelper;
-import net.minecraft.util.Vec3;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
-
-import com.google.common.base.Preconditions;
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.painting.Painting;
-import com.pau101.paintthis.painting.Signature;
-import com.pau101.paintthis.util.Mth;
-import com.pau101.paintthis.util.Util;
-import com.pau101.paintthis.util.nbtassist.NBTAssist;
-import com.pau101.paintthis.util.nbtassist.NBTMutatorProperty;
-import com.pau101.paintthis.util.nbtassist.NBTProperty;
 
 public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	private static final BlockPos NON_HANGING_POS = new BlockPos(0, -1, 0);
@@ -42,7 +48,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	private static final int HANGING_POS_VALIDATE_RATE = 40;
 
 	@NBTMutatorProperty(name = "item", type = ItemStack.class)
-	private static final int ITEM_ID = 5;
+	private static final DataParameter<Optional<ItemStack>> ITEM = EntityDataManager.createKey(EntityCanvas.class, DataSerializers.OPTIONAL_ITEM_STACK); 
 
 	@NBTProperty
 	private Painting painting;
@@ -60,7 +66,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	public boolean hit = false;
 
 	public EntityCanvas(World world) {
-		this(world, new ItemStack(Blocks.stone), false);
+		this(world, new ItemStack(Blocks.STONE), false);
 	}
 
 	public EntityCanvas(World world, ItemStack paintingItem, boolean isBeingPlaced) {
@@ -82,15 +88,15 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 
 	@Override
 	protected void entityInit() {
-		dataWatcher.addObject(ITEM_ID, new ItemStack(Blocks.stone));
+		getDataManager().register(ITEM, Optional.of(new ItemStack(Blocks.STONE)));
 	}
 
 	private void setItem(ItemStack item) {
-		dataWatcher.updateObject(ITEM_ID, item);
+		getDataManager().set(ITEM, Optional.of(item));
 	}
 
 	private ItemStack getItem() {
-		return dataWatcher.getWatchableObjectItemStack(ITEM_ID);
+		return getDataManager().get(ITEM).orNull();
 	}
 
 	public Painting getPainting() {
@@ -134,7 +140,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	}
 
 	public boolean isOnEasel() {
-		return ridingEntity instanceof EntityEasel;
+		return getRidingEntity() instanceof EntityEasel;
 	}
 
 	public boolean isOnBlock() {
@@ -164,8 +170,8 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 		return painting.getHeight() * Painting.PIXELS_PER_BLOCK + (painting.isFramed() ? 2 : 0);
 	}
 
-	public void sign(EntityPlayer player, Vec3 hit) {
-		painting.sign(player, hit);
+	public void sign(EntityPlayer player, EnumHand hand, Vec3d hit) {
+		painting.sign(player, hand, hit);
 	}
 
 	public void setSignature(Signature signature) {
@@ -199,12 +205,15 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	}
 
 	@Override
-	public void mountEntity(Entity entity) {
-		super.mountEntity(entity);
-		if (entity != null) {
-			hangingPosition = NON_HANGING_POS;
-			hangingDirection = NON_HANGING_FACING;
+	public boolean startRiding(Entity entity, boolean force) {
+		if (super.startRiding(entity, force)) {
+			if (entity != null) {
+				hangingPosition = NON_HANGING_POS;
+				hangingDirection = NON_HANGING_FACING;
+			}
+			return true;
 		}
+		return false;
 	}
 
 	protected void updateHangingDirection(EnumFacing hangingDirection) {
@@ -243,32 +252,31 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 		if (isOnEasel()) {
 			return true;
 		}
-		if (!worldObj.getCollidingBoundingBoxes(this, getEntityBoundingBox()).isEmpty()) {
+		if (!worldObj.getCollisionBoxes(this, getEntityBoundingBox()).isEmpty()) {
 			return false;
-		} else {
-			int width = Math.max(1, getWidthPixels() / 16);
-			int height = Math.max(1, getHeightPixels() / 16);
-			BlockPos back = hangingPosition.offset(hangingDirection.getOpposite());
-			EnumFacing side = hangingDirection.rotateYCCW();
-			for (int x = (-width + 1) / 2; x <= width / 2; x++) {
-				for (int y = (-height + 1) / 2; y <= height / 2; y++) {
-					BlockPos blockpos1 = back.offset(side, x).up(y);
-					Block block = worldObj.getBlockState(blockpos1).getBlock();
-					if (block.isSideSolid(worldObj, blockpos1, hangingDirection)) {
-						continue;
-					}
-					if (!block.getMaterial().isSolid() && !BlockRedstoneDiode.isRedstoneRepeaterBlockID(block)) {
-						return false;
-					}
+		}
+		int width = Math.max(1, getWidthPixels() / 16);
+		int height = Math.max(1, getHeightPixels() / 16);
+		BlockPos back = hangingPosition.offset(hangingDirection.getOpposite());
+		EnumFacing side = hangingDirection.rotateYCCW();
+		for (int x = (-width + 1) / 2; x <= width / 2; x++) {
+			for (int y = (-height + 1) / 2; y <= height / 2; y++) {
+				BlockPos pos = back.offset(side, x).up(y);
+				if (worldObj.isSideSolid(pos, hangingDirection)) {
+					continue;
 				}
-			}
-			for (Entity entity : worldObj.getEntitiesWithinAABBExcludingEntity(this, getEntityBoundingBox())) {
-				if (entity instanceof EntityHanging || entity instanceof EntityCanvas) {
+				IBlockState state = worldObj.getBlockState(pos);
+				if (!state.getMaterial().isSolid() && !BlockRedstoneDiode.isDiode(state)) {
 					return false;
 				}
 			}
-			return true;
 		}
+		for (Entity entity : worldObj.getEntitiesWithinAABBExcludingEntity(this, getEntityBoundingBox())) {
+			if (entity instanceof EntityHanging || entity instanceof EntityCanvas) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@Override
@@ -286,7 +294,6 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 					dropCanvas((EntityPlayer) source.getEntity());
 				}
 			}
-
 			return true;
 		}
 	}
@@ -309,7 +316,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	}
 
 	@Override
-	public void setPositionAndRotation2(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
+	public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
 		setPosition(x, y, z);
 		setRotation(yaw, pitch);
 	}
@@ -393,7 +400,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 				EnumFacing dir = EnumFacing.getFacingFromVector(fx, 0, fz);
 				Block.spawnAsEntity(worldObj, new BlockPos(this).offset(dir), stack);
 			}
-			playSound(PaintThis.MODID + ":entity.canvas.break", 0.7F + rand.nextFloat() * 0.2F, 0.8F + rand.nextFloat() * 0.3F);
+			playSound(PTSounds.CANVAS_BREAK, 0.7F + rand.nextFloat() * 0.2F, 0.8F + rand.nextFloat() * 0.3F);
 		}
 	}
 
@@ -406,7 +413,7 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 		if (!painting.hasAssignedUUID()) {
 			painting.assignUUID(UUID.randomUUID());
 		}
-		playSound(PaintThis.MODID + ":entity.canvas.place", 0.7F + rand.nextFloat() * 0.2F, 0.8F + rand.nextFloat() * 0.3F);
+		playSound(PTSounds.CANVAS_PLACE, 0.7F + rand.nextFloat() * 0.2F, 0.8F + rand.nextFloat() * 0.3F);
 	}
 
 	@Override

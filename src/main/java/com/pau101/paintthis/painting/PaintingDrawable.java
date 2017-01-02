@@ -1,17 +1,9 @@
 package com.pau101.paintthis.painting;
 
-import io.netty.buffer.ByteBuf;
-
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.DynamicTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.Vec3;
 
 import com.google.common.base.Throwables;
 import com.pau101.paintthis.PaintThis;
@@ -22,8 +14,15 @@ import com.pau101.paintthis.proxy.ClientProxy;
 import com.pau101.paintthis.util.LineDrawer;
 import com.pau101.paintthis.util.LineDrawer.Stroke;
 
+import io.netty.buffer.ByteBuf;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.Vec3d;
+
 public class PaintingDrawable extends Painting {
-	private static final ResourceLocation PAINT_TEXTURE = new ResourceLocation(PaintThis.MODID, "textures/entity/canvas_paint.png");
+	private static final ResourceLocation PAINT_TEXTURE = new ResourceLocation(PaintThis.ID, "textures/entity/canvas_paint.png");
 
 	private static final double SQRT_2_OVER_2 = Math.sqrt(2) / 2;
 
@@ -71,7 +70,7 @@ public class PaintingDrawable extends Painting {
 	}
 
 	@Override
-	protected void finalize() throws Throwable {
+	protected void finalize() {
 		disposeTexture();
 	}
 
@@ -90,7 +89,7 @@ public class PaintingDrawable extends Painting {
 	}
 
 	@Override
-	public void stroke(Vec3 from, Vec3 to, int size, Dye dye) {
+	public void stroke(Vec3d from, Vec3d to, int size, Dye dye) {
 		byte[] data = getData();
 		int x0 = (int) Math.floor(from.xCoord * getPixelWidth());
 		int y0 = (int) Math.floor(from.yCoord * getPixelHeight());
@@ -105,7 +104,7 @@ public class PaintingDrawable extends Painting {
 	}
 
 	@Override
-	public void dot(Vec3 pos, int size, Dye dye) {
+	public void dot(Vec3d pos, int size, Dye dye) {
 		int cx = (int) Math.floor(pos.xCoord * getPixelWidth());
 		int cy = (int) Math.floor(pos.yCoord * getPixelHeight());
 		byte value = dye.getByteValue();

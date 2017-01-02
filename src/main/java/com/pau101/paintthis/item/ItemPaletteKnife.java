@@ -6,7 +6,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
 public class ItemPaletteKnife extends Item {
-	private static final ItemStack REPAIR = new ItemStack(Items.iron_ingot, 1, OreDictionary.WILDCARD_VALUE);
+	private static final ItemStack REPAIR = new ItemStack(Items.IRON_INGOT, 1, OreDictionary.WILDCARD_VALUE);
 
 	public ItemPaletteKnife() {
 		setUnlocalizedName("paletteKnife");

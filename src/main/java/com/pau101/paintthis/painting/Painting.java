@@ -1,22 +1,22 @@
 package com.pau101.paintthis.painting;
 
-import io.netty.buffer.ByteBuf;
-
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.UUID;
-
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.network.PacketBuffer;
-import net.minecraft.util.Vec3;
-import net.minecraft.world.World;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.dye.Dye;
 import com.pau101.paintthis.util.nbtassist.NBTAssist;
 import com.pau101.paintthis.util.nbtassist.NBTProperty;
+
+import io.netty.buffer.ByteBuf;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.network.PacketBuffer;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 
 public class Painting {
 	public static final int PIXELS_PER_BLOCK = 16;
@@ -91,8 +91,8 @@ public class Painting {
 		return isFramed;
 	}
 
-	public void sign(EntityPlayer player, Vec3 hit) {
-		signature = new Signature(player, Dye.getDyeFromDamage(player.getHeldItem().getMetadata() - 1), Signature.Side.forHit(hit));
+	public void sign(EntityPlayer player, EnumHand hand, Vec3d hit) {
+		signature = new Signature(player, Dye.getDyeFromDamage(player.getHeldItem(hand).getMetadata() - 1), Signature.Side.forHit(hit));
 	}
 
 	public void setSignature(Signature signature) {
@@ -119,9 +119,9 @@ public class Painting {
 		return change;
 	}
 
-	public void stroke(Vec3 from, Vec3 to, int size, Dye dye) {}
+	public void stroke(Vec3d from, Vec3d to, int size, Dye dye) {}
 
-	public void dot(Vec3 pos, int size, Dye dye) {}
+	public void dot(Vec3d pos, int size, Dye dye) {}
 
 	public void set(int x, int y, byte dye) {
 		if (contains(x, y)) {

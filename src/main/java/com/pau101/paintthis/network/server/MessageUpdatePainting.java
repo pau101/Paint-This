@@ -1,15 +1,14 @@
 package com.pau101.paintthis.network.server;
 
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.network.MessagePainting;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.MessagePainting;
 
 public class MessageUpdatePainting extends MessagePainting {
 	public MessageUpdatePainting() {}
@@ -20,18 +19,16 @@ public class MessageUpdatePainting extends MessagePainting {
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public IMessage process(MessageContext ctx) {
+	public void process(MessageContext ctx) {
 		World world = Minecraft.getMinecraft().theWorld;
 		if (world == null) {
-			return null;
+			return;
 		}
 		Entity entity = world.getEntityByID(canvasId);
 		if (!(entity instanceof EntityCanvas)) {
-			return null;
+			return;
 		}
 		EntityCanvas canvas = (EntityCanvas) entity;
-		// Ensure this happens in the thread with GL context
-		Minecraft.getMinecraft().addScheduledTask(() -> canvas.getPainting().update(x, y, width, data));
-		return null;
+		canvas.getPainting().update(x, y, width, data);
 	}
 }

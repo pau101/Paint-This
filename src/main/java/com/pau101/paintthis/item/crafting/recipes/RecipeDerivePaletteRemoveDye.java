@@ -51,11 +51,8 @@ public class RecipeDerivePaletteRemoveDye extends RecipeDerivePalette {
 				Item item = stack.getItem();
 				if (item == PaintThis.palette) {
 					stack = replacementPalette;
-				} else if (item == PaintThis.paletteKnife) {
-					stack.attemptDamageItem(1, RANDOM);
-					if (stack.getItemDamage() > stack.getMaxDamage()) {
-						stack = null;
-					}
+				} else if (item == PaintThis.paletteKnife && stack.attemptDamageItem(1, RANDOM)) {
+					stack = null;
 				}
 			}
 			remaining[i] = stack;

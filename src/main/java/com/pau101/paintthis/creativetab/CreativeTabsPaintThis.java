@@ -11,7 +11,7 @@ public abstract class CreativeTabsPaintThis extends CreativeTabs {
 	private boolean inForeground;
 
 	public CreativeTabsPaintThis(String category) {
-		super(PaintThis.MODID + '.' + category);
+		super(PaintThis.ID + '.' + category);
 	}
 
 	private String getShownTabLabel() {

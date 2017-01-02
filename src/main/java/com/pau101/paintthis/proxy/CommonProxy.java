@@ -2,32 +2,12 @@ package com.pau101.paintthis.proxy;
 
 import java.util.Locale;
 
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityList;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.passive.EntityHorse;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Items;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.entity.EntityEvent.EntityConstructing;
-import net.minecraftforge.event.entity.player.EntityInteractEvent;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
-import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.registry.EntityRegistry;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.oredict.OreDictionary;
-import net.minecraftforge.oredict.RecipeSorter;
-import net.minecraftforge.oredict.ShapedOreRecipe;
-import net.minecraftforge.oredict.ShapelessOreRecipe;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.capability.CapabilityHandler;
+import com.pau101.paintthis.capability.HorseShearability;
+import com.pau101.paintthis.capability.HorseShearabilityDefault;
 import com.pau101.paintthis.creativetab.CreativeTabsPaintThisDyes;
 import com.pau101.paintthis.creativetab.CreativeTabsPaintThisTools;
 import com.pau101.paintthis.dye.Dye;
@@ -47,13 +27,41 @@ import com.pau101.paintthis.item.crafting.recipes.RecipeDerivePaletteAddDye;
 import com.pau101.paintthis.item.crafting.recipes.RecipeDerivePaletteRemoveDye;
 import com.pau101.paintthis.item.crafting.recipes.RecipePainting;
 import com.pau101.paintthis.network.SelfProcessingMessage;
+import com.pau101.paintthis.network.client.MessageDyeSelect;
 import com.pau101.paintthis.network.client.MessagePainterPainting;
 import com.pau101.paintthis.network.client.MessageSignPainting;
 import com.pau101.paintthis.network.server.MessageUpdatePainting;
 import com.pau101.paintthis.network.server.MessageUpdateSign;
 import com.pau101.paintthis.painting.Painting;
-import com.pau101.paintthis.property.HorseShearability;
+import com.pau101.paintthis.sound.PTSounds;
 import com.pau101.paintthis.util.DyeOreDictHelper;
+
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.passive.EntityHorse;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Items;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.IThreadListener;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.network.NetworkRegistry;
+import net.minecraftforge.fml.common.registry.EntityRegistry;
+import net.minecraftforge.fml.common.registry.GameRegistry;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.oredict.OreDictionary;
+import net.minecraftforge.oredict.RecipeSorter;
+import net.minecraftforge.oredict.ShapedOreRecipe;
+import net.minecraftforge.oredict.ShapelessOreRecipe;
 
 public class CommonProxy {
 	private static final String RECIPE_DEPENDENCY = "after:forge:shapedore";
@@ -89,7 +97,7 @@ public class CommonProxy {
 	public void initCrafting() {
 		GameRegistry.addRecipe(new ShapedOreRecipe(PaintThis.easel, " S ", "SSS", "S S", 'S', "stickWood"));
 		GameRegistry.addRecipe(new ShapedOreRecipe(PaintThis.palette, "P", 'P', "slabWood"));
-		GameRegistry.addRecipe(new ShapedOreRecipe(PaintThis.paletteKnife, "F", "I", "S", 'F', Items.flint, 'I', "ingotIron", 'S', "stickWood"));
+		GameRegistry.addRecipe(new ShapedOreRecipe(PaintThis.paletteKnife, "F", "I", "S", 'F', Items.FLINT, 'I', "ingotIron", 'S', "stickWood"));
 		GameRegistry.addRecipe(new ShapedOreRecipe(PaintThis.paintbrushSmall, "H", "S", 'H', PaintThis.horsehair, 'S', "stickWood"));
 		GameRegistry.addShapedRecipe(new ItemStack(PaintThis.paintbrushMedium), "H", "S", 'H', PaintThis.horsehair, 'S', PaintThis.paintbrushSmall);
 		GameRegistry.addShapedRecipe(new ItemStack(PaintThis.paintbrushLarge), "H", "M", 'H', PaintThis.horsehair, 'M', PaintThis.paintbrushMedium);
@@ -121,7 +129,7 @@ public class CommonProxy {
 
 	private void addRecipe(PaintThisRecipe recipe) {
 		GameRegistry.addRecipe(recipe);
-		String name = PaintThis.MODID + ':' + recipe.getRegistryName();
+		String name = PaintThis.ID + ':' + recipe.getRegistryName();
 		RecipeSorter.register(name, recipe.getClass(), RecipeSorter.Category.SHAPED, RECIPE_DEPENDENCY);
 	}
 
@@ -130,47 +138,64 @@ public class CommonProxy {
 		registerEntity(EntityCanvas.class, "Canvas", 160, Integer.MAX_VALUE, false);
 	}
 
+	public void initSounds() {
+		PTSounds.init();
+	}
+
 	public void initRenders() {}
+
+	public void initRendersLater() {}
 
 	public void initModels() {}
 
-	public void initEventHandlers() {
+	public void initHandlers() {
 		MinecraftForge.EVENT_BUS.register(this);
+		CapabilityHandler.init();
 	}
 
 	public void initNetwork() {
-		PaintThis.networkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel(PaintThis.MODID);
+		PaintThis.networkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel(PaintThis.ID);
 		registerMessage(MessagePainterPainting.class, Side.SERVER);
 		registerMessage(MessageUpdatePainting.class, Side.CLIENT);
 		registerMessage(MessageSignPainting.class, Side.SERVER);
 		registerMessage(MessageUpdateSign.class, Side.CLIENT);
+		registerMessage(MessageDyeSelect.class, Side.SERVER);
 	}
 
 	@SubscribeEvent
-	public void onHorseConstructing(EntityConstructing event) {
-		if (isHorse(event.entity)) {
-			event.entity.registerExtendedProperties(HorseShearability.IDENTIFIER, new HorseShearability());
+	public void onHorseConstructing(AttachCapabilitiesEvent.Entity event) {
+		if (isHorse(event.getEntity())) {
+			event.addCapability(CapabilityHandler.HORSE_SHEARABILITY_ID, new HorseShearabilityDefault());
 		}
 	}
 
 	@SubscribeEvent
-	public void onInteract(EntityInteractEvent event) {
-		if (isHorse(event.target)) {
-			EntityPlayer player = event.entityPlayer;
-			if (player.getHeldItem() != null && player.getHeldItem().getItem() == Items.shears) {
-				if (!event.target.worldObj.isRemote) {
-					EntityLiving horse = (EntityLiving) event.target;
-					HorseShearability tolerance = (HorseShearability) horse.getExtendedProperties(HorseShearability.IDENTIFIER);
-					tolerance.shear(horse, player);
+	public void onInteract(PlayerInteractEvent.EntityInteract event) {
+		Entity target = event.getTarget();
+		if (isHorse(target)) {
+			EntityPlayer player = event.getEntityPlayer();
+			EnumHand hand = event.getHand();
+			ItemStack held = player.getHeldItem(hand);
+			if (areShears(held)) {
+				if (!event.getTarget().worldObj.isRemote) {
+					EntityLiving horse = (EntityLiving) target;
+					HorseShearability tolerance = horse.getCapability(CapabilityHandler.HORSER_SHEARABILITY_CAP, null);
+					tolerance.shear(horse, player, event.getHand());
 				}
+				event.setCanceled(true);
+			} else if (hand == EnumHand.OFF_HAND && areShears(player.getHeldItemMainhand())) {
 				event.setCanceled(true);
 			}
 		}
 	}
 
+	private boolean areShears(ItemStack stack) {
+		return stack != null && stack.getItem() == Items.SHEARS;
+	}
+
 	private boolean isHorse(Entity entity) {
 		if (entity instanceof EntityHorse) {
-			return !((EntityHorse) entity).isUndead();
+			return !((EntityHorse) entity).getType().isUndead();
 		}
 		String id = EntityList.getEntityString(entity);
 		if (id != null && id.toLowerCase(Locale.ROOT).contains("horse")) {
@@ -180,7 +205,11 @@ public class CommonProxy {
 	}
 
 	private <M extends SelfProcessingMessage> void registerMessage(Class<M> messageType, Side toSide) {
-		PaintThis.networkWrapper.registerMessage((m, ctx) -> m.process(ctx), messageType, nextMessageId++, toSide);
+		PaintThis.networkWrapper.registerMessage((m, ctx) -> {
+			IThreadListener thread = FMLCommonHandler.instance().getWorldThread(ctx.netHandler);
+			thread.addScheduledTask(() -> m.process(ctx));
+			return null;
+		}, messageType, nextMessageId++, toSide);
 	}
 
 	private void registerEntity(Class<? extends Entity> clazz, String name, int trackingRange, int updateFrequency, boolean sendsVelocityUpdates) {
@@ -193,7 +222,8 @@ public class CommonProxy {
 
 	private <I extends Item> I register(I item, String name, CreativeTabs tab) {
 		item.setCreativeTab(tab);
-		GameRegistry.registerItem(item, name);
+		item.setRegistryName(new ResourceLocation(PaintThis.ID, name));
+		GameRegistry.register(item);
 		return item;
 	}
 
@@ -202,6 +232,14 @@ public class CommonProxy {
 	}
 
 	public boolean isClientPainting(EntityPlayer player) {
+		return false;
+	}
+
+	public boolean usePalette(EnumHand hand, EnumHand paletteHand) {
+		return false;
+	}
+
+	public boolean isLookingAtDye(EnumHand paletteHand) {
 		return false;
 	}
 }

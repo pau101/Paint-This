@@ -1,55 +1,55 @@
 {
 	"entity.easel.break": {
-		"category": "neutral",
-		"sounds":[
-			"entity/easel/break1",
-			"entity/easel/break2",
-			"entity/easel/break3",
-			"entity/easel/break4"
-		]
+		"sounds": [
+			"entity/armorstand/break1",
+			"entity/armorstand/break2",
+			"entity/armorstand/break3",
+			"entity/armorstand/break4"
+		],
+		"subtitle": "subtitles.block.generic.break"
 	},
 	"entity.easel.fall": {
-		"category": "neutral",
 		"sounds": [
-			"minecraft:dig/wood1",
-			"minecraft:dig/wood2",
-			"minecraft:dig/wood3",
-			"minecraft:dig/wood4"
-		]
+			"dig/wood1",
+			"dig/wood2",
+			"dig/wood3",
+			"dig/wood4"
+		],
+		"subtitle": "subtitles.entity.generic.big_fall"
 	},
 	"entity.easel.hit": {
-		"category": "neutral",
 		"sounds": [
-			"entity/easel/hit1",
-			"entity/easel/hit2",
-			"entity/easel/hit3",
-			"entity/easel/hit4"
-		]
+			"entity/armorstand/hit1",
+			"entity/armorstand/hit2",
+			"entity/armorstand/hit3",
+			"entity/armorstand/hit4"
+		],
+		"subtitle": "subtitles.block.generic.hit"
 	},
 	"entity.easel.place": {
-		"category": "neutral",
 		"sounds": [
-			"minecraft:dig/stone1",
-			"minecraft:dig/stone2",
-			"minecraft:dig/stone3",
-			"minecraft:dig/stone4"
-		]
+			"dig/stone1",
+			"dig/stone2",
+			"dig/stone3",
+			"dig/stone4"
+		],
+		"subtitle": "subtitles.block.generic.place"
 	},
 	"entity.canvas.break": {
-		"category": "neutral",
 		"sounds": [
-			"entity/canvas/break1",
-			"entity/canvas/break2",
-			"entity/canvas/break3"
-		]
+			"entity/painting/break1",
+			"entity/painting/break2",
+			"entity/painting/break3"
+		],
+		"subtitle": "subtitles.entity.painting.break"
 	},
 	"entity.canvas.place": {
-		"category": "neutral",
 		"sounds": [
-			"entity/canvas/place1",
-			"entity/canvas/place2",
-			"entity/canvas/place3",
-			"entity/canvas/place4"
-		]
+			"entity/painting/place1",
+			"entity/painting/place2",
+			"entity/painting/place3",
+			"entity/painting/place4"
+		],
+		"subtitle": "subtitles.entity.painting.place"
 	}
 }

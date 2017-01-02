@@ -2,40 +2,41 @@ package com.pau101.paintthis;
 
 import java.util.Set;
 
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.Item;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.WorldServer;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.Mod.EventHandler;
-import net.minecraftforge.fml.common.Mod.Instance;
-import net.minecraftforge.fml.common.SidedProxy;
-import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
-
 import org.apache.commons.lang3.ArrayUtils;
 
 import com.google.common.collect.ImmutableMap;
 import com.pau101.paintthis.item.brush.ItemBrush;
 import com.pau101.paintthis.item.brush.ItemPaintbrush;
 import com.pau101.paintthis.proxy.CommonProxy;
+import com.pau101.paintthis.sound.PTSounds;
 
-@Mod(modid = PaintThis.MODID, name = PaintThis.NAME, version = PaintThis.VERSION)
+import net.minecraft.creativetab.CreativeTabs;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.Item;
+import net.minecraft.world.WorldServer;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Mod.EventHandler;
+import net.minecraftforge.fml.common.Mod.Instance;
+import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
+
+@Mod(modid = PaintThis.ID, name = PaintThis.NAME, version = PaintThis.VERSION)
 public class PaintThis {
-	public static final String MODID = "paintthis";
+	public static final String ID = "paintthis";
 
 	public static final String NAME = "Paint This!";
 
-	public static final String VERSION = "0.0.3";
+	public static final String VERSION = "0.0.4";
 
 	public static final int MAX_CANVAS_SIZE = 4;
 
 	public static final int CANVAS_SIZES = MAX_CANVAS_SIZE * MAX_CANVAS_SIZE;
 
-	@Instance
+	@Instance(ID)
 	public static PaintThis instance;
 
 	@SidedProxy(clientSide = "com.pau101.paintthis.proxy.ClientProxy", serverSide = "com.pau101.paintthis.proxy.CommonProxy")
@@ -71,27 +72,31 @@ public class PaintThis {
 
 	@EventHandler
 	public void init(FMLPreInitializationEvent event) {
+		proxy.initSounds();
 		proxy.initGUI();
 		proxy.initItems();
-		proxy.initCrafting();
 		proxy.initEntities();
 		proxy.initRenders();
 		proxy.initModels();
 		proxy.initNetwork();
-		proxy.initEventHandlers();
+	}
+
+	@EventHandler
+	public void init(FMLInitializationEvent event) {
+		proxy.initRendersLater();
+		proxy.initCrafting();
+		proxy.initHandlers();
 	}
 
 	public static void sendToWatchingEntity(Entity entity, IMessage message, EntityPlayerMP... exclusions) {
-		WorldServer world = MinecraftServer.getServer().worldServerForDimension(entity.dimension);
-		if (world != null) {
-			for (EntityPlayerMP player : (Set<EntityPlayerMP>) world.getEntityTracker().getTrackingPlayers(entity)) {
-				if (!ArrayUtils.contains(exclusions, player)) {
-					networkWrapper.sendTo(message, player);
-				}
+		WorldServer world = (WorldServer) entity.worldObj;
+		for (EntityPlayerMP player : (Set<EntityPlayerMP>) world.getEntityTracker().getTrackingPlayers(entity)) {
+			if (!ArrayUtils.contains(exclusions, player)) {
+				networkWrapper.sendTo(message, player);
 			}
-			if (entity instanceof EntityPlayerMP && !ArrayUtils.contains(exclusions, entity)) {
-				networkWrapper.sendTo(message, (EntityPlayerMP) entity);
-			}
+		}
+		if (entity instanceof EntityPlayerMP && !ArrayUtils.contains(exclusions, entity)) {
+			networkWrapper.sendTo(message, (EntityPlayerMP) entity);
 		}
 	}
 }

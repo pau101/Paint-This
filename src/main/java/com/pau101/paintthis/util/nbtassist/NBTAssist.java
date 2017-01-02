@@ -26,7 +26,7 @@ import net.minecraft.nbt.NBTTagList;
 import net.minecraft.nbt.NBTTagLong;
 import net.minecraft.nbt.NBTTagShort;
 import net.minecraft.nbt.NBTTagString;
-import net.minecraft.util.BlockPos;
+import net.minecraft.util.math.BlockPos;
 
 public final class NBTAssist {
 	private NBTAssist() {}

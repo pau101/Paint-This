@@ -1,18 +1,17 @@
 package com.pau101.paintthis.network.server;
 
+import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.network.SelfProcessingMessage;
+import com.pau101.paintthis.painting.Signature;
+
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.SelfProcessingMessage;
-import com.pau101.paintthis.painting.Signature;
 
 public class MessageUpdateSign implements SelfProcessingMessage {
 	private int canvasId;
@@ -41,16 +40,15 @@ public class MessageUpdateSign implements SelfProcessingMessage {
 
 	@Override
 	@SideOnly(Side.CLIENT)
-	public IMessage process(MessageContext ctx) {
+	public void process(MessageContext ctx) {
 		World world = Minecraft.getMinecraft().theWorld;
 		if (world == null) {
-			return null;
+			return;
 		}
 		Entity entity = world.getEntityByID(canvasId);
 		if (!(entity instanceof EntityCanvas)) {
-			return null;
+			return;
 		}
 		((EntityCanvas) entity).setSignature(signature);
-		return null;
 	}
 }

@@ -3,13 +3,13 @@ package com.pau101.paintthis.dye;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.init.Items;
-import net.minecraft.item.EnumDyeColor;
-import net.minecraft.item.ItemStack;
-
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.util.DyeOreDictHelper;
 import com.pau101.paintthis.util.Util;
+
+import net.minecraft.init.Items;
+import net.minecraft.item.EnumDyeColor;
+import net.minecraft.item.ItemStack;
 
 public enum Dye {
 	BONE_MEAL(0xFFFFFF, DyeType.PRIMARY),
@@ -616,7 +616,7 @@ public enum Dye {
 	}
 
 	public ItemStack createItemStack(int amount) {
-		return new ItemStack(isVanilla() ? Items.dye : PaintThis.dye, amount, damage);
+		return new ItemStack(isVanilla() ? Items.DYE : PaintThis.dye, amount, damage);
 	}
 
 	public List<Dye> getUses() {

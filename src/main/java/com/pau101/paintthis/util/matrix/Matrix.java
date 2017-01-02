@@ -1,5 +1,7 @@
 package com.pau101.paintthis.util.matrix;
 
+import static org.lwjgl.opengl.GL11.glMultMatrix;
+
 import java.util.Stack;
 
 import javax.vecmath.AxisAngle4d;
@@ -9,7 +11,10 @@ import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
 
+import org.lwjgl.util.glu.GLU;
+
 import com.google.common.base.Preconditions;
+import com.pau101.paintthis.util.Mth;
 import com.pau101.paintthis.util.Pool;
 
 public class Matrix {
@@ -98,7 +103,7 @@ public class Matrix {
 		Matrix4d mat = matrixStack.peek();
 		Matrix4d rotation = getMatrix();
 		rotation.setIdentity();
-		AxisAngle4d axisAngle = getAxisAngle(x, y, z, angle);
+		AxisAngle4d axisAngle = getAxisAngle(x, y, z, angle * Mth.DEG_TO_RAD);
 		rotation.setRotation(axisAngle);
 		freeAxisAngle(axisAngle);
 		mat.mul(rotation);
@@ -114,6 +119,29 @@ public class Matrix {
 		scale.m33 = 1;
 		mat.mul(scale);
 		freeMatrix(scale);
+	}
+
+	public void mult(Matrix4d other) {
+		matrixStack.peek().mul(other);
+	}
+
+	public void perspective(double fovy, double aspect, double zNear, double zFar) {
+		double radians = fovy / 2 * Mth.DEG_TO_RAD;
+		double deltaZ = zFar - zNear;
+		double sine = Math.sin(radians);
+		if (deltaZ == 0 || sine == 0 || aspect == 0) {
+			return;
+		}
+		double cotangent = Math.cos(radians) / sine;
+		Matrix4d mat = matrixStack.peek();
+		Matrix4d perspective = getMatrix();
+		perspective.m00 = cotangent / aspect;
+		perspective.m11 = cotangent;
+		perspective.m22 = -(zFar + zNear) / deltaZ;
+		perspective.m32 = -1;
+		perspective.m23 = -2 * zNear * zFar / deltaZ;
+		mat.mul(perspective);
+		freeMatrix(perspective);
 	}
 
 	public void transform(Point3f point) {
@@ -142,5 +170,9 @@ public class Matrix {
 
 	public Matrix4d getTransform() {
 		return new Matrix4d(matrixStack.peek());
+	}
+
+	public void getTransform(Matrix4d mat) {
+		mat.set(matrixStack.peek());
 	}
 }

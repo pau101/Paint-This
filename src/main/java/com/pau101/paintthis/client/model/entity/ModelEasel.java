@@ -77,8 +77,8 @@ public class ModelEasel extends ModelBase {
 	@Override
 	public void render(Entity entity, float swing, float speed, float yaw, float pitch, float age, float scale) {
 		EntityEasel easel = (EntityEasel) entity;
-		if (easel.riddenByEntity instanceof EntityCanvas) {
-			EntityCanvas canvas = (EntityCanvas) easel.riddenByEntity;
+		if (easel.getControllingPassenger() instanceof EntityCanvas) {
+			EntityCanvas canvas = (EntityCanvas) easel.getControllingPassenger();
 			lock.rotationPointY = 36.1F - canvas.getHeight() * Painting.PIXELS_PER_BLOCK - (canvas.isFramed() ? 2 : 0);
 		} else {
 			lock.rotationPointY = 4.1F;
