@@ -13,6 +13,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.item.ItemPalette;
@@ -66,11 +67,11 @@ public class ItemPaletteModel implements IModel {
 				failCause = e;
 			}
 		}
-		if (failCause != null) {
+		if (failCause == null) {
+			generateDyeRegions(layers);
+		} else {
 			textureSize = -1;
 			dyeRegions = null;
-		} else {
-			generateDyeRegions(layers);
 		}
 		TextureAtlasSprite particle = bakedTextureGetter.apply(textures.isEmpty() ? new ResourceLocation("missingno") : textures.get(0));
 		return new BakedItemPaletteModelProvider(builder.build(), particle, format, IPerspectiveAwareModel.MapWrapper.getTransforms(transforms));
@@ -81,7 +82,14 @@ public class ItemPaletteModel implements IModel {
 		textureSize = -1;
 		for (int i = 0; i < textures.size(); i++) {
 			TextureAtlasSprite sprite = bakedTextureGetter.apply(textures.get(i));
-			builder.add(getQuadsForSprite(i, sprite, format, transform));
+			if (i < 1 || i > ItemPalette.DYE_COUNT) {
+				builder.add(getQuadsForSprite(i, sprite, format, transform));
+			} else {
+				// Don't want sides for dye layers
+				ImmutableList.Builder<BakedQuad> dyeQuads = ImmutableList.builder();
+				addFrontBack(dyeQuads, format, transform, i, sprite);
+				builder.add(dyeQuads.build());
+			}
 			if (failCause == null && i > 0 && i <= ItemPalette.DYE_COUNT) {
 				if (sprite.getIconWidth() != sprite.getIconHeight()) {
 					failCause = new IllegalArgumentException("Non-square dye overlay dimensions for \"" + sprite.getIconName() + "\", " + sprite.getIconWidth() + "x" + sprite.getIconHeight());
@@ -106,7 +114,7 @@ public class ItemPaletteModel implements IModel {
 			int[] layer = layers[i];
 			for (int n = 0; n < area; n++) {
 				if (layer[n] >>> 24 > 127) {
-					dyeRegions[n] |= (1 << i);	
+					dyeRegions[n] |= (1 << i);
 				} else {
 					dyeRegions[n] &= ~(1 << i);
 				}
@@ -121,7 +129,7 @@ public class ItemPaletteModel implements IModel {
 
 	@Override
 	public Collection<ResourceLocation> getDependencies() {
-		return ImmutableList.of();
+		return ImmutableSet.of();
 	}
 
 	@Override
@@ -174,15 +182,19 @@ public class ItemPaletteModel implements IModel {
 				}
 			}
 		}
-		// front
-		builder.add(buildQuad(format, transform, EnumFacing.NORTH, tint, 0, 0, 7.5F / 16, sprite.getMinU(), sprite.getMaxV(), 0, 1, 7.5F / 16, sprite.getMinU(), sprite.getMinV(), 1, 1, 7.5F / 16, sprite.getMaxU(), sprite.getMinV(), 1, 0, 7.5F / 16, sprite.getMaxU(), sprite.getMaxV()));
-		// back
-		builder.add(buildQuad(format, transform, EnumFacing.SOUTH, tint, 0, 0, 8.5F / 16, sprite.getMinU(), sprite.getMaxV(), 1, 0, 8.5F / 16, sprite.getMaxU(), sprite.getMaxV(), 1, 1, 8.5F / 16, sprite.getMaxU(), sprite.getMinV(), 0, 1, 8.5F / 16, sprite.getMinU(), sprite.getMinV()));
+		addFrontBack(builder, format, transform, tint, sprite);
 		return builder.build();
 	}
 
+	private static void addFrontBack(ImmutableList.Builder<BakedQuad> builder, VertexFormat format, Optional<TRSRTransformation> transform, int tint, TextureAtlasSprite sprite) {
+		// front
+		builder.add(buildQuad(format, transform, EnumFacing.NORTH, tint, 0, 0, 7.5F / 16, sprite.getMinU(), sprite.getMaxV(), 0, 1, 7.5F / 16, sprite.getMinU(), sprite.getMinV(), 1, 1, 7.5F / 16, sprite.getMaxU(), sprite.getMinV(), 1, 0, 7.5F / 16, sprite.getMaxU(), sprite.getMaxV()));
+		// back
+		builder.add(buildQuad(format, transform, EnumFacing.SOUTH, tint, 0, 0, 8.5F / 16, sprite.getMinU(), sprite.getMaxV(), 1, 0, 8.5F / 16, sprite.getMaxU(), sprite.getMaxV(), 1, 1, 8.5F / 16, sprite.getMaxU(), sprite.getMinV(), 0, 1, 8.5F / 16, sprite.getMinU(), sprite.getMinV()));		
+	}
+
 	protected boolean isTransparent(int[] pixels, int uMax, int vMax, int u, int v) {
-		return (pixels[u + (vMax - 1 - v) * uMax] >> 24 & 0xFF) == 0;
+		return (pixels[u + (vMax - 1 - v) * uMax] >>> 24) == 0;
 	}
 
 	private static void addSideQuad(ImmutableList.Builder<BakedQuad> builder, BitSet faces, VertexFormat format, Optional<TRSRTransformation> transform, EnumFacing side, int tint, TextureAtlasSprite sprite, int uMax, int vMax, int u, int v) {
@@ -224,8 +236,8 @@ public class ItemPaletteModel implements IModel {
 		}
 		float u0 = 16 * (x0 - side.getDirectionVec().getX() * eps3 / sprite.getIconWidth());
 		float u1 = 16 * (x1 - side.getDirectionVec().getX() * eps3 / sprite.getIconWidth());
-		float v0 = 16 * (1f - y0 - side.getDirectionVec().getY() * eps3 / sprite.getIconHeight());
-		float v1 = 16 * (1f - y1 - side.getDirectionVec().getY() * eps3 / sprite.getIconHeight());
+		float v0 = 16 * (1 - y0 - side.getDirectionVec().getY() * eps3 / sprite.getIconHeight());
+		float v1 = 16 * (1 - y1 - side.getDirectionVec().getY() * eps3 / sprite.getIconHeight());
 		switch (side) {
 			case WEST:
 			case EAST:
@@ -301,22 +313,13 @@ public class ItemPaletteModel implements IModel {
 				case UV:
 					if (format.getElement(e).getIndex() == 0) {
 						builder.put(e, u, v, 0, 1);
+						break;
 					}
-					break;
 				case NORMAL:
-					if (transform.isPresent()) {
-						normal.x = side.getFrontOffsetX();
-						normal.y = side.getFrontOffsetY();
-						normal.z = side.getFrontOffsetZ();
-						transform.get().getMatrix().transform(normal);
-						builder.put(e, normal.x, normal.y, normal.z, 0);
-					} else {
-						builder.put(e, side.getFrontOffsetX(), side.getFrontOffsetY(), side.getFrontOffsetZ(), 0);
-					}
+					builder.put(e, side.getFrontOffsetX(), side.getFrontOffsetY(), side.getFrontOffsetZ(), 0);
 					break;
 				default:
 					builder.put(e);
-					break;
 			}
 		}
 	}
@@ -351,8 +354,7 @@ public class ItemPaletteModel implements IModel {
 			while ((tex = modelBlock.textures.get("layer" + texLayer++)) != null) {
 				builder.add(new ResourceLocation(tex));
 			}
-			ImmutableList<ResourceLocation> rls = builder.build();
-			return new ItemPaletteModel(rls, modelBlock.getAllTransforms());
+			return new ItemPaletteModel(builder.build(), modelBlock.getAllTransforms());
 		}
 	}
 

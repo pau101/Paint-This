@@ -1,6 +1,5 @@
 package com.pau101.paintthis.client.model.item;
 
-import java.util.Collections;
 import java.util.List;
 
 import javax.vecmath.Matrix4f;
@@ -23,8 +22,6 @@ import net.minecraftforge.client.model.IPerspectiveAwareModel;
 import net.minecraftforge.common.model.TRSRTransformation;
 
 public class BakedItemPaletteModel implements IBakedModel, IPerspectiveAwareModel {
-	private final IBakedModel firstPersonInvisible = new BlankModel();
-
 	private final ImmutableList<BakedQuad> quads;
 
 	private final TextureAtlasSprite particle;
@@ -101,44 +98,5 @@ public class BakedItemPaletteModel implements IBakedModel, IPerspectiveAwareMode
 	@Override
 	public ItemOverrideList getOverrides() {
 		return ItemOverrideList.NONE;
-	}
-
-	private final class BlankModel implements IBakedModel {
-		private BlankModel() {}
-	
-		@Override
-		public List<BakedQuad> getQuads(IBlockState state, EnumFacing side, long rand) {
-			return Collections.EMPTY_LIST;
-		}
-
-		@Override
-		public boolean isAmbientOcclusion() {
-			return false;
-		}
-
-		@Override
-		public boolean isGui3d() {
-			return false;
-		}
-
-		@Override
-		public boolean isBuiltInRenderer() {
-			return false;
-		}
-
-		@Override
-		public TextureAtlasSprite getParticleTexture() {
-			return particle;
-		}
-
-		@Override
-		public ItemCameraTransforms getItemCameraTransforms() {
-			return ItemCameraTransforms.DEFAULT;
-		}
-
-		@Override
-		public ItemOverrideList getOverrides() {
-			return ItemOverrideList.NONE;
-		}
 	}
 }

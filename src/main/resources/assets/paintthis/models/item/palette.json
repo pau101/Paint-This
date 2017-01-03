@@ -12,15 +12,35 @@
 		"layer8": "paintthis:items/palette_dye_7"
 	},
 	"display": {
-		"thirdperson_righthand": {
-			"rotation": [ 0, 180, 350 ],
-			"translation": [ 4.75, 1.75, 0.75 ],
-			"scale": [ 1.00, 1.00, 1.00 ]
-		},
 		"thirdperson_lefthand": {
+			"rotation": [ 0, 0, 10 ],
+			"translation": [ 4.75, 1.75, 0.75 ],
+			"scale": [ 1, 1, 1 ]
+		},
+		"thirdperson_righthand": {
+			"rotation": [ 0, 180, -10 ],
+			"translation": [ 4.75, 1.75, 0.75 ],
+			"scale": [ 1, 1, 1 ]
+		},
+		"firstperson_lefthand": {
+			"rotation": [ -45, -50, -30 ],
+			"translation": [ 0.25, 2.5, 0 ],
+			"scale": [ 0.68, 0.68, 0.68 ]
+		},
+		"firstperson_righthand": {
+			"rotation": [ -45, 130, 30 ],
+			"translation": [ 0.25, 2.5, 0 ],
+			"scale": [ 0.68, 0.68, 0.68 ]
+		},
+		"head": {
+			"rotation": [ 0, 180.0, 0 ],
+			"translation": [ 0, 0.8125, 0.4375 ],
+			"scale": [ 1, 1, 1 ]
+		},
+		"ground": {
 			"rotation": [ 0, 0, 0 ],
-			"translation": [ 0.00, 0.00, 0.00 ],
-			"scale": [ 1.00, 1.00, 1.00 ]
+			"translation": [ 0, 0.125, 0 ],
+			"scale": [ 0.5, 0.5, 0.5 ]
 		}
 	}
 }

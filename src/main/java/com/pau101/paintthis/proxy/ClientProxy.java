@@ -12,10 +12,12 @@ import java.util.Optional;
 
 import javax.imageio.ImageIO;
 import javax.vecmath.Matrix4d;
+import javax.vecmath.Matrix4f;
 import javax.vecmath.Point3f;
 import javax.vecmath.Quat4d;
 import javax.vecmath.Vector3d;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
@@ -41,10 +43,12 @@ import com.pau101.paintthis.item.crafting.PositionedItemStack;
 import com.pau101.paintthis.network.client.MessageDyeSelect;
 import com.pau101.paintthis.painting.Painting;
 import com.pau101.paintthis.painting.PaintingDrawable;
+import com.pau101.paintthis.util.CubicBezier;
 import com.pau101.paintthis.util.DyeOreDictHelper;
 import com.pau101.paintthis.util.Mth;
 import com.pau101.paintthis.util.Util;
 import com.pau101.paintthis.util.matrix.Matrix;
+import com.pau101.paintthis.util.matrix.MatrixStack;
 
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -91,6 +95,7 @@ import net.minecraftforge.client.event.ModelBakeEvent;
 import net.minecraftforge.client.event.RenderSpecificHandEvent;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.client.model.IPerspectiveAwareModel;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.client.model.ModelLoaderRegistry;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
@@ -118,6 +123,8 @@ public class ClientProxy extends CommonProxy {
 	private static final int ARROW_HEIGHT = 10;
 
 	private static final MethodHandle RENDER_ITEM = Util.getHandle(RenderItem.class, new String[] { "func_175045_a", "renderModel" }, IBakedModel.class, int.class, ItemStack.class);
+
+	private static final CubicBezier PALETTE_TRANSITION = new CubicBezier(1, 0, 0.77F, 0.96F);
 
 	private static int deltaWheel;
 
@@ -158,7 +165,7 @@ public class ClientProxy extends CommonProxy {
 		try {
 			field.set(mc.entityRenderer, renderer);
 		} catch (Exception e) {
-			e.printStackTrace();
+			Throwables.propagate(e);
 		}
 	}
 
@@ -288,7 +295,9 @@ public class ClientProxy extends CommonProxy {
 
 	@SubscribeEvent
 	public void renderSpecificHand(RenderSpecificHandEvent event) {
-		if (shouldShowInteractivePalette(Minecraft.getMinecraft().thePlayer, event.getHand())) {
+		Minecraft mc = Minecraft.getMinecraft();
+		EntityPlayerSP player = mc.thePlayer;
+		if (canUsePalette(mc, player) && shouldShowInteractivePalette(player, event.getHand())) {
 			event.setCanceled(true);
 		}
 	}
@@ -307,12 +316,9 @@ public class ClientProxy extends CommonProxy {
 			if (!shouldShowInteractivePalette(player, hand)) {
 				continue;
 			}
-			if (!rendered) {
-				mc.entityRenderer.enableLightmap();
-				// Don't want colors washed out
-				RenderHelper.disableStandardItemLighting();
-				rendered = true;
-			}
+			mc.entityRenderer.enableLightmap();
+			// Don't want colors washed out
+			RenderHelper.enableStandardItemLighting(); // disable
 			boolean mainHand = hand == EnumHand.MAIN_HAND;
 			ItemStack stack, other;
 			if (mainHand) {
@@ -323,7 +329,7 @@ public class ClientProxy extends CommonProxy {
 				other = renderer.itemStackMainHand;
 			}
 			float yaw = player.prevRenderYawOffset + (player.renderYawOffset - player.prevRenderYawOffset) * delta;
-			boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT == (hand == EnumHand.OFF_HAND);
+			boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != mainHand;
 			float thisPrevEP, thisEP, otherPrevEP, otherEP;
 			if (mainHand) {
 				thisPrevEP = renderer.prevEquippedProgressMainHand;
@@ -337,43 +343,38 @@ public class ClientProxy extends CommonProxy {
 				otherEP = renderer.equippedProgressMainHand;
 			}
 			float pep = thisPrevEP, ep = thisEP;
+			ItemStack usingEquip = stack, heldEquip = player.getHeldItem(hand);
 			if (other != null && other.getItem() instanceof ItemBrush) {
 				if (thisEP == thisPrevEP && otherEP < 1) {
 					pep = otherPrevEP;
 					ep = otherEP;
+					usingEquip = other;
+					heldEquip = player.getHeldItem(mainHand ? EnumHand.OFF_HAND  : EnumHand.MAIN_HAND);
 				}
 			}
-			float equip = 1 - (pep + (ep - pep) * delta);
+			float equip = 1 - (pep + (ep - pep) * delta); // ((float) Math.sin(System.currentTimeMillis() * 0.002)) * 0.5F + 0.5F;
 			GlStateManager.pushMatrix();
 			if (equip == 0) {
-				GlStateManager.rotate(-yaw, 0, 1, 0);
-				GlStateManager.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
-				GlStateManager.rotate(70, 1, 0, 0);
-				if (isLeft) {
-					GlStateManager.rotate(180, 0, 1, 0);
-				}
-				GlStateManager.scale(0.5F, 0.5F, 0.5F);
+				transformPalette(GL_MATRIX, player, yaw, isLeft);
 			} else {
-				paletteTransformAnimation(mc, player, yaw, isLeft, mainHand, equip, delta);
+				float e;
+				if (equip < 1 && usingEquip != heldEquip) {
+					e = 1 - PALETTE_TRANSITION.eval(1 - equip);
+				} else {
+					e = PALETTE_TRANSITION.eval(equip);
+				}
+				paletteTransformAnimation(mc, player, yaw, isLeft, mainHand, e, thisEP == 1 ? 0 : 1, delta);
 			}
-			mc.getRenderItem().renderItem(stack, isLeft ? TransformType.FIRST_PERSON_LEFT_HAND : TransformType.FIRST_PERSON_RIGHT_HAND);
+			mc.getRenderItem().renderItem(stack, player, isLeft ? TransformType.FIRST_PERSON_LEFT_HAND : TransformType.FIRST_PERSON_RIGHT_HAND, isLeft);
 			GlStateManager.popMatrix();
-		}
-		if (rendered) {
 			mc.entityRenderer.disableLightmap();
 		}
 	}
 
-	private void paletteTransformAnimation(Minecraft mc, EntityPlayerSP player, float yaw, boolean isLeft, boolean mainHand, float equip, float delta) {
+	private void paletteTransformAnimation(Minecraft mc, EntityPlayerSP player, float yaw, boolean isLeft, boolean mainHand, float equip, float regularEquip, float delta) {
 		MATRIX.setIdentity();
 		MATRIX.mult(getMatrix(GL11.GL_MODELVIEW_MATRIX));
-		MATRIX.rotate(-yaw, 0, 1, 0);
-		MATRIX.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
-		MATRIX.rotate(70, 1, 0, 0);
-		if (isLeft) {
-			MATRIX.rotate(180, 0, 1, 0);
-		}
-		MATRIX.scale(0.5F, 0.5F, 0.5F);
+		transformPalette(MATRIX, player, yaw, isLeft);
 		Matrix4d modelView1 = MATRIX.getTransform();
 		Matrix4d perspective1 = getMatrix(GL11.GL_PROJECTION_MATRIX);
 		float fov = 70;
@@ -417,7 +418,7 @@ public class ClientProxy extends CommonProxy {
 		MATRIX.rotate(Math.abs(MathHelper.cos(walked * Mth.PI - 0.2F) * camYaw) * 5 + camPitch, 1, 0, 0);
 		MATRIX.rotate((player.rotationPitch - armPitch) * 0.1F, 1, 0, 0);
 		MATRIX.rotate((player.rotationYaw - armYaw) * 0.1F, 0, 1, 0);
-		MATRIX.translate(side * swingX + side * 0.56F, swingY - 0.52F, swingZ - 0.72F);
+		MATRIX.translate(side * swingX + side * 0.56F, swingY - 0.52F - regularEquip * 0.6F, swingZ - 0.72F);
 		MATRIX.rotate(side * (45 + swingAmt * -20), 0, 1, 0);
 		MATRIX.rotate(side * swingAng * -20, 0, 0, 1);
 		MATRIX.rotate(swingAng * -80, 1, 0, 0);
@@ -431,6 +432,21 @@ public class ClientProxy extends CommonProxy {
 		GlStateManager.matrixMode(GL11.GL_MODELVIEW);
 		GlStateManager.loadIdentity();
 		multMatrix(modelView);
+	}
+
+	private void transformPalette(MatrixStack matrix, EntityPlayer player, float yaw, boolean isLeft) {
+		matrix.rotate(-yaw, 0, 1, 0);
+		if (isLeft) {
+			matrix.scale(-1, 1, 1);	
+		}
+		matrix.translate(-0.16, player.isSneaking() ? 1.17 : 1.25, 0.3);
+		matrix.rotate(-130, 0, 1, 0);
+		matrix.rotate(-20, 1, 0, 0);
+		matrix.rotate(-34, 0, 0, 1);
+		matrix.scale(0.6, 0.6, 0.6);
+		if (isLeft) {
+			matrix.scale(-1, 1, 1);
+		}
 	}
 
 	private static final FloatBuffer MATRIX_BUF = BufferUtils.createFloatBuffer(16);
@@ -462,62 +478,17 @@ public class ClientProxy extends CommonProxy {
 		b.get(bTrans);
 		double aScale = a.getScale(); // only a uniform scale is used the rendering so this'll do
 		double bScale = b.getScale();
-		Quat4d rot = slerp(aRot, bRot, t);
+		aRot.interpolate(bRot, t);
 		aTrans.interpolate(bTrans, t);
 		double scale = interpolate(aScale, bScale, t);
 		Matrix4d mat = new Matrix4d();
 		mat.set(aTrans);
 		Matrix4d scratch = new Matrix4d();
-		scratch.set(rot);
+		scratch.set(aRot);
 		mat.mul(scratch);
 		scratch.set(scale);
 		mat.mul(scratch);
 		return mat;
-	}
-
-	/*
-	 * http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
-	 */
-	private static Quat4d slerp(Quat4d qa, Quat4d qb, double t) {
-		// quaternion to return
-		Quat4d qm = new Quat4d();
-		// Calculate angle between them.
-		double cosHalfTheta = qa.w * qb.w + qa.x * qb.x + qa.y * qb.y + qa.z * qb.z;
-		if (cosHalfTheta < 0) {
-			qb.w = -qb.w;
-			qb.x = -qb.x;
-			qb.y = -qb.y;
-			qb.z = qb.z;
-			cosHalfTheta = -cosHalfTheta;
-		}
-		// if qa=qb or qa=-qb then theta = 0 and we can return qa
-		if (Math.abs(cosHalfTheta) >= 1) {
-			qm.w = qa.w;
-			qm.x = qa.x;
-			qm.y = qa.y;
-			qm.z = qa.z;
-			return qm;
-		}
-		// Calculate temporary values.
-		double halfTheta = Math.acos(cosHalfTheta);
-		double sinHalfTheta = Math.sqrt(1 - cosHalfTheta * cosHalfTheta);
-		// if theta = 180 degrees then result is not fully defined
-		// we could rotate around any axis normal to qa or qb
-		if (Math.abs(sinHalfTheta) < 0.001) {
-			qm.w = qa.w * 0.5 + qb.w * 0.5;
-			qm.x = qa.x * 0.5 + qb.x * 0.5;
-			qm.y = qa.y * 0.5 + qb.y * 0.5;
-			qm.z = qa.z * 0.5 + qb.z * 0.5;
-			return qm;
-		}
-		double ratioA = Math.sin((1 - t) * halfTheta) / sinHalfTheta;
-		double ratioB = Math.sin(t * halfTheta) / sinHalfTheta;
-		// calculate Quaternion.
-		qm.w = qa.w * ratioA + qb.w * ratioB;
-		qm.x = qa.x * ratioA + qb.x * ratioB;
-		qm.y = qa.y * ratioA + qb.y * ratioB;
-		qm.z = qa.z * ratioA + qb.z * ratioB;
-		return qm;
 	}
 
 	private static Matrix4d interpolatePerspective(Matrix4d a, Matrix4d b, double t) {
@@ -551,26 +522,22 @@ public class ClientProxy extends CommonProxy {
 	private boolean shouldShowInteractivePalette(EntityPlayer player, EnumHand hand) {
 		ItemRenderer renderer = Minecraft.getMinecraft().getItemRenderer();
 		ItemStack held, other;
-		float thisPrevEP, thisEP, otherPrevEP, otherEP;
 		if (hand == EnumHand.MAIN_HAND) {
 			held = renderer.itemStackMainHand;
 			other = renderer.itemStackOffHand;
-			thisPrevEP = renderer.prevEquippedProgressMainHand;
-			thisEP = renderer.equippedProgressMainHand;
-			otherPrevEP = renderer.prevEquippedProgressOffHand;
-			otherEP = renderer.equippedProgressOffHand;
 		} else {
 			held = renderer.itemStackOffHand;
 			other = renderer.itemStackMainHand;
-			thisPrevEP = renderer.prevEquippedProgressOffHand;
-			thisEP = renderer.equippedProgressOffHand;
-			otherPrevEP = renderer.prevEquippedProgressMainHand;
-			otherEP = renderer.equippedProgressMainHand;
 		}
-		if (held != null && held.getItem() == PaintThis.palette) {
-			return other != null && other.getItem() instanceof ItemBrush;
-		}
-		return false;
+		return held != null && held.getItem() == PaintThis.palette && other != null && other.getItem() instanceof ItemBrush;
+	}
+
+	private static final Matrix4d FLIP_X;
+
+	static {
+		FLIP_X = new Matrix4d();
+		FLIP_X.setIdentity();
+		FLIP_X.m00 = -1;
 	}
 
 	private Dye getLookingAtDye(EnumHand hand) {
@@ -581,19 +548,27 @@ public class ClientProxy extends CommonProxy {
 			Vec3d origin = new Vec3d(0, player.getEyeHeight(), 0);
 			Vec3d look = player.getLookVec();
 			MATRIX.setIdentity();
-			MATRIX.rotate(-player.renderYawOffset, 0, 1, 0);
 			boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT == (hand == EnumHand.OFF_HAND);
-			MATRIX.translate(isLeft ? 0.25F : -0.25F, player.isSneaking() ? 1.17F : 1.25F, 0.4F);
-			MATRIX.rotate(70, 1, 0, 0);
-			if (isLeft) {
-				MATRIX.rotate(180, 0, 1, 0);
+			transformPalette(MATRIX, player, player.renderYawOffset, isLeft);
+			IBakedModel model = mc.getRenderItem().getItemModelWithOverrides(stack, mc.theWorld, mc.thePlayer);
+			if (!(model instanceof IPerspectiveAwareModel)) {
+				return null;
 			}
-			MATRIX.scale(0.5F, 0.5F, 0.5F);
-			MATRIX.translate(-0.5F, -0.5F, isLeft ? 0.03125F : -0.03125F);
-			Point3f v1 = new Point3f(0, 1, 0);
-			Point3f v2 = new Point3f(1, 1, 0);
-			Point3f v3 = new Point3f(1, 0, 0);
-			Point3f v4 = new Point3f(0, 0, 0);
+			Pair<? extends IBakedModel, Matrix4f> pair = ((IPerspectiveAwareModel) model).handlePerspective(isLeft ? TransformType.FIRST_PERSON_LEFT_HAND : TransformType.FIRST_PERSON_RIGHT_HAND);
+			if (pair.getRight() != null) {
+				Matrix4d matrix = new Matrix4d(pair.getRight());
+				if (isLeft) {
+					matrix.mul(FLIP_X, matrix);
+					matrix.mul(matrix, FLIP_X);
+				}
+				MATRIX.mult(matrix);
+			}
+			MATRIX.translate(-0.5, -0.5, -0.5);
+			float top = isLeft ?  8.5F / 16 : 7.5F / 16;
+			Point3f v1 = new Point3f(0, 1, top);
+			Point3f v2 = new Point3f(1, 1, top);
+			Point3f v3 = new Point3f(1, 0, top);
+			Point3f v4 = new Point3f(0, 0, top);
 			MATRIX.transform(v1);
 			MATRIX.transform(v2);
 			MATRIX.transform(v3);
@@ -628,7 +603,7 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private boolean canUsePalette(Minecraft mc, EntityPlayer player) {
-		return player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator();
+		return ItemPaletteModel.textureSize > -1 && player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator();
 	}
 
 	private static boolean shouldShowRecipes() {
@@ -846,4 +821,32 @@ public class ClientProxy extends CommonProxy {
 	public static BufferedImage getImage(ResourceLocation id) throws IOException {
 		return ImageIO.read(Minecraft.getMinecraft().getResourceManager().getResource(id).getInputStream());
 	}
+
+	private static final MatrixStack GL_MATRIX = new MatrixStack() {
+		@Override
+		public void push() {
+			GlStateManager.pushMatrix();
+		}
+
+		@Override
+		public void pop() {
+			GlStateManager.popMatrix();
+		}
+
+		@Override
+		public void translate(double x, double y, double z) {
+			GlStateManager.translate(x, y, z);
+		}
+
+		@Override
+		public void rotate(double angle, double x, double y, double z) {
+			GlStateManager.rotate((float) angle, (float) x, (float) y, (float) z);
+		}
+
+		@Override
+		public void scale(double x, double y, double z) {
+			GlStateManager.scale(x, y, z);
+		}
+		
+	};
 }

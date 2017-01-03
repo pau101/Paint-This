@@ -31,7 +31,7 @@ public final class ItemRendererPatch extends ItemRenderer {
 		} else {
 			if ((prevItemStackMainHand != main || itemStackMainHand == main && equippedProgressMainHand == 1) && !ForgeHooksClient.shouldCauseReequipAnimation(itemStackMainHand, main, player.inventory.currentItem)) {
 				immediateMain = itemStackMainHand != main;
-			} else if (ItemStack.areItemsEqual(itemStackMainHand, main)) {
+			} else if (ItemStack.areItemStacksEqual(itemStackMainHand, main)) {
 				float strength = player.getCooledAttackStrength(1);
 				equippedProgressMainHand += MathHelper.clamp_float(strength * strength * strength - equippedProgressMainHand, -0.4F, 0.4F);
 			} else {
@@ -39,7 +39,7 @@ public final class ItemRendererPatch extends ItemRenderer {
 			}
 			if ((prevItemStackOffHand != off || itemStackOffHand == off && equippedProgressOffHand == 1) && !ForgeHooksClient.shouldCauseReequipAnimation(itemStackOffHand, off, -1)) {
 				immediateOff = itemStackOffHand != off;
-			} else if (ItemStack.areItemsEqual(itemStackOffHand, off)) {
+			} else if (ItemStack.areItemStacksEqual(itemStackOffHand, off)) {
 				equippedProgressOffHand += MathHelper.clamp_float(1 - equippedProgressOffHand, -0.4F, 0.4F);
 			} else {
 				equippedProgressOffHand += MathHelper.clamp_float(0 - equippedProgressOffHand, -0.4F, 0.4F);
@@ -63,8 +63,9 @@ public final class ItemRendererPatch extends ItemRenderer {
 
 	@Override
 	public void resetEquippedProgress(EnumHand hand) {
-		ItemStack stack = Minecraft.getMinecraft().thePlayer.getHeldItem(hand);
-		if (ForgeHooksClient.shouldCauseReequipAnimation(stack, stack, -1)) {
+		EntityPlayerSP player = Minecraft.getMinecraft().thePlayer;
+		ItemStack stack = player.getHeldItem(hand);
+		if (ForgeHooksClient.shouldCauseReequipAnimation(stack, stack, hand == EnumHand.MAIN_HAND ? player.inventory.currentItem : -1)) {
 			if (hand == EnumHand.MAIN_HAND) {
 				equippedProgressMainHand = 0;
 			} else {

@@ -1,7 +1,5 @@
 package com.pau101.paintthis.util.matrix;
 
-import static org.lwjgl.opengl.GL11.glMultMatrix;
-
 import java.util.Stack;
 
 import javax.vecmath.AxisAngle4d;
@@ -11,13 +9,11 @@ import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
 
-import org.lwjgl.util.glu.GLU;
-
 import com.google.common.base.Preconditions;
 import com.pau101.paintthis.util.Mth;
 import com.pau101.paintthis.util.Pool;
 
-public class Matrix {
+public class Matrix implements MatrixStack {
 	private Pool<Matrix4d> matrixPool;
 
 	private Pool<Vector3d> vectorPool;
@@ -71,12 +67,14 @@ public class Matrix {
 		axisAnglePool.freeInstance(axisAngle);
 	}
 
+	@Override
 	public void push() {
 		Matrix4d mat = getMatrix();
 		mat.set(matrixStack.peek());
 		matrixStack.push(mat);
 	}
 
+	@Override
 	public void pop() {
 		if (matrixStack.size() < 2) {
 			throw new StackUnderflowError();
@@ -88,6 +86,7 @@ public class Matrix {
 		matrixStack.peek().setIdentity();
 	}
 
+	@Override
 	public void translate(double x, double y, double z) {
 		Matrix4d mat = matrixStack.peek();
 		Matrix4d translation = getMatrix();
@@ -99,6 +98,7 @@ public class Matrix {
 		freeMatrix(translation);
 	}
 
+	@Override
 	public void rotate(double angle, double x, double y, double z) {
 		Matrix4d mat = matrixStack.peek();
 		Matrix4d rotation = getMatrix();
@@ -110,6 +110,7 @@ public class Matrix {
 		freeMatrix(rotation);
 	}
 
+	@Override
 	public void scale(double x, double y, double z) {
 		Matrix4d mat = matrixStack.peek();
 		Matrix4d scale = getMatrix();

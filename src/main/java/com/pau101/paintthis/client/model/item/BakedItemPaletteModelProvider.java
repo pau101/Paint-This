@@ -71,19 +71,6 @@ public class BakedItemPaletteModelProvider implements IBakedModel {
 		return ItemCameraTransforms.DEFAULT;
 	}
 
-	private static int getModelIndex(ItemStack stack) {
-		int index = 0;
-		if (stack.hasTagCompound()) {
-			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
-			for (int i = 0; i < dyes.length; i++) {
-				if (dyes[i] != Dye.NO_DYE) {
-					index |= 1 << i;
-				}
-			}
-		}
-		return index;
-	}
-
 	@Override
 	public ItemOverrideList getOverrides() {
 		return override;
@@ -109,5 +96,18 @@ public class BakedItemPaletteModelProvider implements IBakedModel {
 			}
 			return models[index];
 		}
+	}
+
+	private static int getModelIndex(ItemStack stack) {
+		int index = 0;
+		if (stack.hasTagCompound()) {
+			byte[] dyes = stack.getTagCompound().getByteArray("dyes");
+			for (int i = 0; i < dyes.length; i++) {
+				if (dyes[i] != Dye.NO_DYE) {
+					index |= 1 << i;
+				}
+			}
+		}
+		return index;
 	}
 }
