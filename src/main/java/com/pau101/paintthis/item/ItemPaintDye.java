@@ -8,7 +8,7 @@ import net.minecraft.item.ItemStack;
 
 import com.pau101.paintthis.dye.Dye;
 
-public class ItemPaintDye extends Item {
+public class ItemPaintDye extends Item implements PainterUsable {
 	public ItemPaintDye() {
 		setUnlocalizedName("dye");
 		setHasSubtypes(true);

@@ -6,7 +6,7 @@ import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.dye.Dye;
 import com.pau101.paintthis.entity.item.EntityCanvas;
 import com.pau101.paintthis.item.brush.ItemPaintbrush;
-import com.pau101.paintthis.network.client.MessagePainterPainting;
+import com.pau101.paintthis.net.serverbound.MessagePainterPainting;
 import com.pau101.paintthis.painting.Painting;
 
 import net.minecraft.item.ItemStack;

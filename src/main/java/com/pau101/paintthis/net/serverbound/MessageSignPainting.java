@@ -1,21 +1,21 @@
-package com.pau101.paintthis.network.client;
+package com.pau101.paintthis.net.serverbound;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.entity.item.EntityCanvas;
 import com.pau101.paintthis.item.brush.ItemBrush;
 import com.pau101.paintthis.item.brush.ItemSigningBrush;
-import com.pau101.paintthis.network.SelfProcessingMessage;
-import com.pau101.paintthis.network.server.MessageUpdateSign;
+import com.pau101.paintthis.net.PTMessage;
+import com.pau101.paintthis.net.clientbound.MessageUpdateSign;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
-public class MessageSignPainting implements SelfProcessingMessage {
+public class MessageSignPainting extends PTMessage {
 	private int canvasId;
 
 	private EnumHand hand;
@@ -31,18 +31,18 @@ public class MessageSignPainting implements SelfProcessingMessage {
 	}
 
 	@Override
-	public void toBytes(ByteBuf buf) {
+	public void serialize(PacketBuffer buf) {
 		buf.writeInt(canvasId);
-		buf.writeBoolean(hand == EnumHand.MAIN_HAND);
+		buf.writeEnumValue(hand);
 		buf.writeDouble(hit.xCoord);
 		buf.writeDouble(hit.yCoord);
 		buf.writeDouble(hit.zCoord);
 	}
 
 	@Override
-	public void fromBytes(ByteBuf buf) {
+	public void deserialize(PacketBuffer buf) {
 		canvasId = buf.readInt();
-		hand = buf.readBoolean() ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND;
+		hand = buf.readEnumValue(EnumHand.class);
 		hit = new Vec3d(buf.readDouble(), buf.readDouble(), buf.readDouble());
 	}
 

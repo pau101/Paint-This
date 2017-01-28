@@ -6,7 +6,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.client.MessageSignPainting;
+import com.pau101.paintthis.net.serverbound.MessageSignPainting;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
@@ -23,7 +23,7 @@ public class ItemSigningBrush extends ItemBrush {
 
 	@Override
 	public ActionResult<ItemStack> onItemRightClick(ItemStack stack, World world, EntityPlayer player, EnumHand hand) {
-		if (PaintThis.proxy.isClientPainting(player) && !useClientPalette(stack, player, hand) && stack.getMetadata() > 0) {
+		if (PaintThis.proxy.isClientPainting(player) && stack.getMetadata() > 0) {
 			Optional<Pair<EntityCanvas, Vec3d>> hit = findHitCanvas(player);
 			if (hit.isPresent()) {
 				EntityCanvas canvas = hit.get().getLeft();

@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.util.DyeOreDictHelper;
+import com.pau101.paintthis.util.OreDictUtil;
 import com.pau101.paintthis.util.Util;
 
 import net.minecraft.init.Items;
@@ -634,7 +634,7 @@ public enum Dye {
 		if (stack.getItem() == PaintThis.dye) {
 			return getDyeFromDamage(stack.getMetadata() + VANILLA_DYE_COUNT);
 		}
-		int vanillaDyeMetadata = EnumDyeColor.byDyeDamage(DyeOreDictHelper.getDyeDamage(stack)).getMetadata();
+		int vanillaDyeMetadata = EnumDyeColor.byDyeDamage(OreDictUtil.getDyeDamage(stack)).getMetadata();
 		if (vanillaDyeMetadata > -1) {
 			return values()[vanillaDyeMetadata];
 		}

@@ -1,5 +1,7 @@
 package com.pau101.paintthis.util.matrix;
 
+import javax.vecmath.Matrix4d;
+
 public interface MatrixStack {
 	void push();
 
@@ -10,4 +12,8 @@ public interface MatrixStack {
 	void rotate(double angle, double x, double y, double z);
 
 	void scale(double x, double y, double z);
+
+	void mul(Matrix4d matrix);
+
+	void loadIdentity();
 }

@@ -27,6 +27,14 @@ public final class Mth {
 		return (a % b + b) % b;
 	}
 
+	public static float interpolate(float a, float b, float t) {
+		return a + (b - a) * t;
+	}
+
+	public static double interpolate(double a, double b, double t) {
+		return a + (b - a) * t;
+	}
+
 	/*
 	 * http://people.cs.kuleuven.be/~ares.lagae/publications/LD05ERQIT/LD05ERQIT.pdf
 	 */

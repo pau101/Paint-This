@@ -1,13 +1,11 @@
 package com.pau101.paintthis.item;
 
-import net.minecraft.init.Items;
+import com.pau101.paintthis.util.OreDictUtil;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraftforge.oredict.OreDictionary;
 
-public class ItemPaletteKnife extends Item {
-	private static final ItemStack REPAIR = new ItemStack(Items.IRON_INGOT, 1, OreDictionary.WILDCARD_VALUE);
-
+public class ItemPaletteKnife extends Item implements PainterUsable {
 	public ItemPaletteKnife() {
 		setUnlocalizedName("paletteKnife");
 		setMaxStackSize(1);
@@ -16,6 +14,6 @@ public class ItemPaletteKnife extends Item {
 
 	@Override
 	public boolean getIsRepairable(ItemStack toRepair, ItemStack repair) {
-		return OreDictionary.itemMatches(REPAIR, repair, false);
+		return OreDictUtil.matches(repair, "ingotIron");
 	}
 }

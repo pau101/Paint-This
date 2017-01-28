@@ -1,11 +1,11 @@
-package com.pau101.paintthis.network;
-
-import io.netty.buffer.ByteBuf;
+package com.pau101.paintthis.net;
 
 import com.pau101.paintthis.entity.item.EntityCanvas;
 import com.pau101.paintthis.painting.Painting;
 
-public abstract class MessagePainting implements SelfProcessingMessage {
+import net.minecraft.network.PacketBuffer;
+
+public abstract class MessagePainting extends PTMessage {
 	protected int canvasId;
 
 	protected int x;
@@ -31,7 +31,7 @@ public abstract class MessagePainting implements SelfProcessingMessage {
 	}
 
 	@Override
-	public void toBytes(ByteBuf buf) {
+	public void serialize(PacketBuffer buf) {
 		buf.writeInt(canvasId);
 		buf.writeByte(x);
 		buf.writeByte(y);
@@ -41,7 +41,7 @@ public abstract class MessagePainting implements SelfProcessingMessage {
 	}
 
 	@Override
-	public void fromBytes(ByteBuf buf) {
+	public void deserialize(PacketBuffer buf) {
 		canvasId = buf.readInt();
 		x = buf.readByte();
 		y = buf.readByte();

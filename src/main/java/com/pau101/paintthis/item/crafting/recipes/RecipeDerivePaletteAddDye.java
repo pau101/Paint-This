@@ -4,7 +4,7 @@ import net.minecraft.item.ItemStack;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.dye.Dye;
-import com.pau101.paintthis.util.DyeOreDictHelper;
+import com.pau101.paintthis.util.OreDictUtil;
 
 public class RecipeDerivePaletteAddDye extends RecipeDerivePalette {
 	@Override
@@ -14,7 +14,7 @@ public class RecipeDerivePaletteAddDye extends RecipeDerivePalette {
 
 	@Override
 	protected boolean isOperand(ItemStack stack) {
-		return DyeOreDictHelper.isDye(stack) || stack.getItem() == PaintThis.dye;
+		return OreDictUtil.isDye(stack) || stack.getItem() == PaintThis.dye;
 	}
 
 	@Override

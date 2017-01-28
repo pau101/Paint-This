@@ -5,6 +5,7 @@ import java.util.Stack;
 import javax.vecmath.AxisAngle4d;
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Point3f;
+import javax.vecmath.Quat4d;
 import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3d;
 import javax.vecmath.Vector3f;
@@ -82,10 +83,6 @@ public class Matrix implements MatrixStack {
 		freeMatrix(matrixStack.pop());
 	}
 
-	public void setIdentity() {
-		matrixStack.peek().setIdentity();
-	}
-
 	@Override
 	public void translate(double x, double y, double z) {
 		Matrix4d mat = matrixStack.peek();
@@ -122,8 +119,22 @@ public class Matrix implements MatrixStack {
 		freeMatrix(scale);
 	}
 
-	public void mult(Matrix4d other) {
+	@Override
+	public void mul(Matrix4d other) {
 		matrixStack.peek().mul(other);
+	}
+
+	@Override
+	public void loadIdentity() {
+		matrixStack.peek().setIdentity();
+	}
+
+	public void rotate(Quat4d quat) {
+		Matrix4d mat = matrixStack.peek();
+		Matrix4d rotation = getMatrix();
+		rotation.set(quat);
+		mat.mul(rotation);
+		freeMatrix(rotation);
 	}
 
 	public void perspective(double fovy, double aspect, double zNear, double zFar) {

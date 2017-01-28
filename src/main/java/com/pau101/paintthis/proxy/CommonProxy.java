@@ -26,15 +26,15 @@ import com.pau101.paintthis.item.crafting.recipes.RecipeCanvasExtend;
 import com.pau101.paintthis.item.crafting.recipes.RecipeDerivePaletteAddDye;
 import com.pau101.paintthis.item.crafting.recipes.RecipeDerivePaletteRemoveDye;
 import com.pau101.paintthis.item.crafting.recipes.RecipePainting;
-import com.pau101.paintthis.network.SelfProcessingMessage;
-import com.pau101.paintthis.network.client.MessageDyeSelect;
-import com.pau101.paintthis.network.client.MessagePainterPainting;
-import com.pau101.paintthis.network.client.MessageSignPainting;
-import com.pau101.paintthis.network.server.MessageUpdatePainting;
-import com.pau101.paintthis.network.server.MessageUpdateSign;
+import com.pau101.paintthis.net.PTMessage;
+import com.pau101.paintthis.net.clientbound.MessageUpdatePainting;
+import com.pau101.paintthis.net.clientbound.MessageUpdateSign;
+import com.pau101.paintthis.net.serverbound.MessagePainterPainting;
+import com.pau101.paintthis.net.serverbound.MessagePaletteInteraction;
+import com.pau101.paintthis.net.serverbound.MessageSignPainting;
 import com.pau101.paintthis.painting.Painting;
 import com.pau101.paintthis.sound.PTSounds;
-import com.pau101.paintthis.util.DyeOreDictHelper;
+import com.pau101.paintthis.util.OreDictUtil;
 
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
@@ -122,7 +122,7 @@ public class CommonProxy {
 
 	private Object getIngredient(Dye dye) {
 		if (dye.isVanilla()) {
-			return DyeOreDictHelper.getDyeNameFromDamage(dye.getDamage());
+			return OreDictUtil.getDyeNameFromDamage(dye.getDamage());
 		}
 		return dye.createItemStack();
 	}
@@ -156,10 +156,10 @@ public class CommonProxy {
 	public void initNetwork() {
 		PaintThis.networkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel(PaintThis.ID);
 		registerMessage(MessagePainterPainting.class, Side.SERVER);
-		registerMessage(MessageUpdatePainting.class, Side.CLIENT);
 		registerMessage(MessageSignPainting.class, Side.SERVER);
+		registerMessage(MessagePaletteInteraction.class, Side.SERVER);
 		registerMessage(MessageUpdateSign.class, Side.CLIENT);
-		registerMessage(MessageDyeSelect.class, Side.SERVER);
+		registerMessage(MessageUpdatePainting.class, Side.CLIENT);
 	}
 
 	@SubscribeEvent
@@ -204,7 +204,7 @@ public class CommonProxy {
 		return false;
 	}
 
-	private <M extends SelfProcessingMessage> void registerMessage(Class<M> messageType, Side toSide) {
+	private <M extends PTMessage> void registerMessage(Class<M> messageType, Side toSide) {
 		PaintThis.networkWrapper.registerMessage((m, ctx) -> {
 			IThreadListener thread = FMLCommonHandler.instance().getWorldThread(ctx.netHandler);
 			thread.addScheduledTask(() -> m.process(ctx));
@@ -232,10 +232,6 @@ public class CommonProxy {
 	}
 
 	public boolean isClientPainting(EntityPlayer player) {
-		return false;
-	}
-
-	public boolean usePalette(EnumHand hand, EnumHand paletteHand) {
 		return false;
 	}
 

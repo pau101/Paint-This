@@ -39,11 +39,8 @@ public class ItemPaintbrush extends ItemBrush {
 
 	@Override
 	public ActionResult<ItemStack> onItemRightClick(ItemStack stack, World world, EntityPlayer player, EnumHand hand) {
-		if (PaintThis.proxy.isClientPainting(player)) {
-			useClientPalette(stack, player, hand);
-		}
-		player.setActiveHand(hand);
-		return new ActionResult<>(EnumActionResult.SUCCESS, stack);
+//		player.setActiveHand(hand);
+		return new ActionResult<>(EnumActionResult.FAIL, stack);
 	}
 
 	@Override

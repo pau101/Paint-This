@@ -7,22 +7,19 @@ import javax.vecmath.Point3f;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.dye.Dye;
 import com.pau101.paintthis.entity.item.EntityCanvas;
+import com.pau101.paintthis.item.PainterUsable;
 import com.pau101.paintthis.util.Mth;
 import com.pau101.paintthis.util.matrix.Matrix;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagInt;
-import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.translation.I18n;
 
-public abstract class ItemBrush extends Item {
+public abstract class ItemBrush extends Item implements PainterUsable {
 	public static final double REACH = 3;
 
 	private static final Matrix MATRIX = new Matrix(4);
@@ -52,15 +49,6 @@ public abstract class ItemBrush extends Item {
 		return !(newStack.getItem() instanceof ItemBrush);
 	}
 
-	protected static boolean useClientPalette(ItemStack stack, EntityPlayer player, EnumHand hand) {
-		EnumHand opposite = hand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND;
-		ItemStack other = player.getHeldItem(opposite);
-		if (other != null && other.getItem() == PaintThis.palette) {
-			return PaintThis.proxy.usePalette(hand, opposite);
-		}
-		return false;
-	}
-
 	protected static Optional<Pair<EntityCanvas, Vec3d>> findHitCanvas(EntityPlayer player) {
 		List<EntityCanvas> canvases = player.worldObj.getEntitiesWithinAABB(EntityCanvas.class, player.getEntityBoundingBox().expand(REACH * 2, REACH * 2, REACH * 2));
 		Optional<EntityCanvas> hitCanvas = Optional.<EntityCanvas> empty();
@@ -71,7 +59,7 @@ public abstract class ItemBrush extends Item {
 			if (player.getDistanceToEntity(canvas) > REACH * 2) {
 				continue;
 			}
-			MATRIX.setIdentity();
+			MATRIX.loadIdentity();
 			MATRIX.rotate(-canvas.rotationYaw, 0, 1, 0);
 			MATRIX.rotate((canvas.rotationPitch + 90), 1, 0, 0);
 			float w = canvas.getWidth() / 2F, h = canvas.getHeight() / 2F;
@@ -102,23 +90,5 @@ public abstract class ItemBrush extends Item {
 
 	private static Vec3d getVec3(Point3f p) {
 		return new Vec3d(p.x, p.y, p.z);
-	}
-
-	public static void setDyeIndex(ItemStack brush, int dyeIndex) {
-		brush.setTagInfo("dyeIndex", new NBTTagInt(dyeIndex));
-	}
-
-	public static int getDyeIndex(ItemStack brush) {
-		if (brush == null) {
-			return -1;
-		}
-		if (brush.getItem() instanceof ItemBrush) {
-			NBTTagCompound compound = brush.getTagCompound();
-			if (compound == null || !compound.hasKey("dyeIndex", 3)) {
-				return -1;
-			}
-			return compound.getInteger("dyeIndex");
-		}
-		return -1;
 	}
 }

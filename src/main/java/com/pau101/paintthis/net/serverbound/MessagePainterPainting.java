@@ -1,17 +1,17 @@
-package com.pau101.paintthis.network.client;
+package com.pau101.paintthis.net.serverbound;
 
 import com.pau101.paintthis.PaintThis;
 import com.pau101.paintthis.entity.item.EntityCanvas;
 import com.pau101.paintthis.item.brush.ItemBrush;
 import com.pau101.paintthis.item.brush.ItemPaintbrush;
-import com.pau101.paintthis.network.MessagePainting;
-import com.pau101.paintthis.network.server.MessageUpdatePainting;
+import com.pau101.paintthis.net.MessagePainting;
+import com.pau101.paintthis.net.clientbound.MessageUpdatePainting;
 import com.pau101.paintthis.painting.Painting;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumHand;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
@@ -27,15 +27,15 @@ public class MessagePainterPainting extends MessagePainting {
 	}
 
 	@Override
-	public void toBytes(ByteBuf buf) {
-		super.toBytes(buf);
-		buf.writeBoolean(hand == EnumHand.MAIN_HAND);
+	public void serialize(PacketBuffer buf) {
+		super.serialize(buf);
+		buf.writeEnumValue(hand);
 	}
 
 	@Override
-	public void fromBytes(ByteBuf buf) {
-		super.fromBytes(buf);
-		hand = buf.readBoolean() ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND;
+	public void deserialize(PacketBuffer buf) {
+		super.deserialize(buf);
+		hand = buf.readEnumValue(EnumHand.class);
 	}
 
 	@Override

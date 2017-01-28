@@ -1,10 +1,9 @@
-package com.pau101.paintthis.network.server;
+package com.pau101.paintthis.net.clientbound;
 
 import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.SelfProcessingMessage;
+import com.pau101.paintthis.net.PTMessage;
 import com.pau101.paintthis.painting.Signature;
 
-import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.network.PacketBuffer;
@@ -13,7 +12,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
-public class MessageUpdateSign implements SelfProcessingMessage {
+public class MessageUpdateSign extends PTMessage {
 	private int canvasId;
 
 	private Signature signature;
@@ -26,13 +25,13 @@ public class MessageUpdateSign implements SelfProcessingMessage {
 	}
 
 	@Override
-	public void toBytes(ByteBuf buf) {
+	public void serialize(PacketBuffer buf) {
 		buf.writeInt(canvasId);
 		signature.writeToBuffer(new PacketBuffer(buf));
 	}
 
 	@Override
-	public void fromBytes(ByteBuf buf) {
+	public void deserialize(PacketBuffer buf) {
 		canvasId = buf.readInt();
 		signature = new Signature();
 		signature.readFromBuffer(new PacketBuffer(buf));

@@ -18,6 +18,11 @@ public class ItemPalette extends Item {
 	}
 
 	@Override
+	public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+		return !(newStack.getItem() instanceof ItemPalette);
+	}
+
+	@Override
 	public void addInformation(ItemStack stack, EntityPlayer player, List<String> tooltip, boolean advanced) {
 		if (stack.hasTagCompound()) {
 			byte[] dyes = stack.getTagCompound().getByteArray("dyes");

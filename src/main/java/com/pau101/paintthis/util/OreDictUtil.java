@@ -7,42 +7,44 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
-public class DyeOreDictHelper {
+public class OreDictUtil {
 	private static final String[] DYE_NAMES = { "dyeBlack", "dyeRed", "dyeGreen", "dyeBrown", "dyeBlue", "dyePurple", "dyeCyan", "dyeLightGray", "dyeGray", "dyePink", "dyeLime", "dyeYellow", "dyeLightBlue", "dyeMagenta", "dyeOrange", "dyeWhite" };
 
 	private static List<ItemStack>[] dyeItemStacks;
 
 	private static List<ItemStack> allDyeItemStacks;
 
-	private DyeOreDictHelper() {}
+	private OreDictUtil() {}
 
 	public static boolean isDye(ItemStack stack) {
-		if (stack != null) {
-			if (stack.getItem() == Items.DYE) {
+		if (stack == null) {
+			return false;
+		}
+		if (stack.getItem() == Items.DYE) {
+			return true;
+		}
+		initDyeItemStacks();
+		for (ItemStack dye : allDyeItemStacks) {
+			if (OreDictionary.itemMatches(dye, stack, false)) {
 				return true;
-			}
-			initDyeItemStacks();
-			for (ItemStack dye : allDyeItemStacks) {
-				if (OreDictionary.itemMatches(dye, stack, false)) {
-					return true;
-				}
 			}
 		}
 		return false;
 	}
 
 	public static int getDyeDamage(ItemStack stack) {
-		if (stack != null) {
-			if (stack.getItem() == Items.DYE) {
-				return stack.getMetadata();
-			}
-			initDyeItemStacks();
-			for (int i = 0; i < DYE_NAMES.length; i++) {
-				List<ItemStack> dyes = dyeItemStacks[i];
-				for (ItemStack dye : dyes) {
-					if (OreDictionary.itemMatches(dye, stack, false)) {
-						return i;
-					}
+		if (stack == null) {
+			return -1;
+		}
+		if (stack.getItem() == Items.DYE) {
+			return stack.getMetadata();
+		}
+		initDyeItemStacks();
+		for (int i = 0; i < DYE_NAMES.length; i++) {
+			List<ItemStack> dyes = dyeItemStacks[i];
+			for (ItemStack dye : dyes) {
+				if (OreDictionary.itemMatches(dye, stack, false)) {
+					return i;
 				}
 			}
 		}
@@ -54,6 +56,10 @@ public class DyeOreDictHelper {
 			return "";
 		}
 		return DYE_NAMES[damage];
+	}
+
+	public static boolean matches(ItemStack stack, String name) {
+		return OreDictionary.containsMatch(false, OreDictionary.getOres(name), stack);
 	}
 
 	private static void initDyeItemStacks() {

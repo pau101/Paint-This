@@ -1,7 +1,7 @@
-package com.pau101.paintthis.network.server;
+package com.pau101.paintthis.net.clientbound;
 
 import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.network.MessagePainting;
+import com.pau101.paintthis.net.MessagePainting;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
