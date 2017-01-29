@@ -13,6 +13,7 @@ import net.minecraft.nbt.NBTTagByteArray;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.network.PacketBuffer;
 import net.minecraft.util.EnumHand;
+import net.minecraftforge.event.ForgeEventFactory;
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 public class MessagePaletteInteraction extends PTMessage {
@@ -50,9 +51,11 @@ public class MessagePaletteInteraction extends PTMessage {
 		ItemStack stack = player.getHeldItem(hand);
 		ItemStack palette = player.getHeldItem(hand == EnumHand.MAIN_HAND ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
 		if (palette != null && palette.getItem() == PaintThis.palette && action.isItem(stack)) {
+			player.stopActiveHand();
 			action.perform(player, stack, palette, slot);
 			if (stack.stackSize <= 0) {
 				player.setHeldItem(hand, null);
+				ForgeEventFactory.onPlayerDestroyItem(player, stack, hand);
 			}
 			player.inventoryContainer.detectAndSendChanges();
 		}
@@ -105,7 +108,7 @@ public class MessagePaletteInteraction extends PTMessage {
 					dyes = compound.getByteArray("dyes");
 					if (dyes.length != ItemPalette.DYE_COUNT) {
 						return;
-					}	
+					}
 				}
 				byte val = dyes[slot];
 				if (val != Dye.NO_DYE) {

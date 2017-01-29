@@ -77,6 +77,11 @@ public class EntityEasel extends EntityLivingBase implements IEntityAdditionalSp
 	}
 
 	@Override
+	public String getName() {
+		return "item.easel.name";
+	}
+
+	@Override
 	public boolean processInitialInteract(EntityPlayer player, ItemStack heldStack, EnumHand hand) {
 		if (!(getControllingPassenger() instanceof EntityCanvas) && Painting.isPainting(heldStack) && canSupportPainting(heldStack)) {
 			if (!worldObj.isRemote) {

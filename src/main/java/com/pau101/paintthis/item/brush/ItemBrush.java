@@ -49,7 +49,7 @@ public abstract class ItemBrush extends Item implements PainterUsable {
 		return !(newStack.getItem() instanceof ItemBrush);
 	}
 
-	protected static Optional<Pair<EntityCanvas, Vec3d>> findHitCanvas(EntityPlayer player) {
+	public static Optional<Pair<EntityCanvas, Vec3d>> findHitCanvas(EntityPlayer player) {
 		List<EntityCanvas> canvases = player.worldObj.getEntitiesWithinAABB(EntityCanvas.class, player.getEntityBoundingBox().expand(REACH * 2, REACH * 2, REACH * 2));
 		Optional<EntityCanvas> hitCanvas = Optional.<EntityCanvas> empty();
 		Optional<Vec3d> hitVec = Optional.of(new Vec3d(-1, -1, REACH));

@@ -27,12 +27,16 @@ public final class Mth {
 		return (a % b + b) % b;
 	}
 
-	public static float interpolate(float a, float b, float t) {
+	public static float lerp(float a, float b, float t) {
 		return a + (b - a) * t;
 	}
 
-	public static double interpolate(double a, double b, double t) {
+	public static double lerp(double a, double b, double t) {
 		return a + (b - a) * t;
+	}
+
+	public static Vec3d lerp(Vec3d a, Vec3d b, double t) {
+		return new Vec3d(lerp(a.xCoord, b.xCoord, t), lerp(a.yCoord, b.yCoord, t), lerp(a.zCoord, b.zCoord, t));
 	}
 
 	/*

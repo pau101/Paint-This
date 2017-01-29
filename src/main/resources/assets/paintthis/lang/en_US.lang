@@ -1,7 +1,7 @@
 itemGroup.paintthis.tools=Tools
 itemGroup.paintthis.dyes=Dyes
 
-dyeRecipes.tip=Hold [Shift] to show recipes
+dyeRecipes.tip=§9Hold [Shift] to show recipes
 dyeRecipes.uses=Uses
 dyeRecipes.prior=%s Before
 dyeRecipes.later=%s More

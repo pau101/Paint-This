@@ -235,7 +235,5 @@ public class CommonProxy {
 		return false;
 	}
 
-	public boolean isLookingAtDye(EnumHand paletteHand) {
-		return false;
-	}
+	public void paint(EntityPlayer player, ItemStack stack, EnumHand hand) {}
 }

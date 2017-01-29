@@ -2,9 +2,11 @@ package com.pau101.paintthis.client.model.item;
 
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
+import java.util.List;
 
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
@@ -29,6 +31,8 @@ import net.minecraft.client.resources.IResource;
 import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3i;
 import net.minecraftforge.client.model.ICustomModelLoader;
 import net.minecraftforge.client.model.IModel;
 import net.minecraftforge.client.model.IPerspectiveAwareModel;
@@ -39,6 +43,8 @@ import net.minecraftforge.common.model.TRSRTransformation;
 
 public class ItemPaletteModel implements IModel {
 	public static byte[] dyeRegions;
+
+	public static Vec3d[] dyeCenters;
 
 	public static int textureSize = -1;
 
@@ -56,7 +62,7 @@ public class ItemPaletteModel implements IModel {
 	@Override
 	public IBakedModel bake(IModelState state, VertexFormat format, Function<ResourceLocation, TextureAtlasSprite> bakedTextureGetter) {
 		ImmutableList.Builder<ImmutableList<BakedQuad>> builder = ImmutableList.builder();
-		int[][] layers = new int[ItemPalette.DYE_COUNT][];
+		int[][] layers = new int[1 + ItemPalette.DYE_COUNT][];
 		failCause = null;
 		if (textures.size() <= ItemPalette.DYE_COUNT) {
 			failCause = new IllegalArgumentException("Nine textures are needed for the palette, first being the empty palette, then one for each dye location.");
@@ -72,6 +78,7 @@ public class ItemPaletteModel implements IModel {
 		} else {
 			textureSize = -1;
 			dyeRegions = null;
+			dyeCenters = null;
 		}
 		TextureAtlasSprite particle = bakedTextureGetter.apply(textures.isEmpty() ? new ResourceLocation("missingno") : textures.get(0));
 		return new BakedItemPaletteModelProvider(builder.build(), particle, format, IPerspectiveAwareModel.MapWrapper.getTransforms(transforms));
@@ -90,7 +97,7 @@ public class ItemPaletteModel implements IModel {
 				addFrontBack(dyeQuads, format, transform, i, sprite);
 				builder.add(dyeQuads.build());
 			}
-			if (failCause == null && i > 0 && i <= ItemPalette.DYE_COUNT) {
+			if (failCause == null && i <= ItemPalette.DYE_COUNT) {
 				if (sprite.getIconWidth() != sprite.getIconHeight()) {
 					failCause = new IllegalArgumentException("Non-square dye overlay dimensions for \"" + sprite.getIconName() + "\", " + sprite.getIconWidth() + "x" + sprite.getIconHeight());
 				} else if (textureSize == -1) {
@@ -100,7 +107,7 @@ public class ItemPaletteModel implements IModel {
 				} else if (sprite.getFrameCount() == 0) {
 					failCause = new IllegalArgumentException("Missing frames for dye overlay \"" + sprite.getIconName() + "\"");
 				}
-				layers[i - 1] = sprite.getFrameTextureData(0)[0];
+				layers[i] = sprite.getFrameTextureData(0)[0];
 			}
 		}
 	}
@@ -110,15 +117,70 @@ public class ItemPaletteModel implements IModel {
 		if (dyeRegions == null || dyeRegions.length != area) {
 			dyeRegions = new byte[area];
 		}
-		for (int i = 0; i < layers.length; i++) {
-			int[] layer = layers[i];
-			for (int n = 0; n < area; n++) {
-				if (layer[n] >>> 24 > 127) {
-					dyeRegions[n] |= (1 << i);
-				} else {
-					dyeRegions[n] &= ~(1 << i);
+		if (dyeCenters == null) {
+			dyeCenters = new Vec3d[ItemPalette.DYE_COUNT];
+		}
+		byte layerPresence = 0;
+		for (int i = 0; i < area; i++) {
+			boolean empty = true;
+			if (layers[0][i] >>> 24 > 127) {
+				for (int n = layers.length - 1; n > 0; n--) {
+					int[] layer = layers[n];
+					if (layer[i] >>> 24 > 127) {
+						dyeRegions[i] = (byte) n;
+						empty = false;
+						layerPresence |= (1 << (n - 1));
+						break;
+					}
 				}
 			}
+			if (empty) {
+				dyeRegions[i] = 0;	
+			}
+		}
+		if ((layerPresence & 0xFF) != 0xFF) {
+//			throw new IllegalArgumentException("There are missing dye pixels: " + Integer.toBinaryString(layerPresence & 0xFF | 0x100).substring(1));
+			return; // probably the loading first model bake without textures...
+		}
+		List<Vec3i> edges = new ArrayList<>(area / 2);
+		double[] cx = new double[dyeCenters.length];
+		double[] cy = new double[dyeCenters.length];
+		int[] counts = new int[dyeCenters.length];
+		for (int i = 0; i < area; i++) {
+			int layer = dyeRegions[i];
+			if (layer == 0) {
+				continue;
+			}
+			int x = i % textureSize, y = i / textureSize;
+			if (x == 0 || dyeRegions[i - 1] == 0 || x == textureSize - 1 || dyeRegions[i + 1] == 0 || y == 0 || dyeRegions[i - textureSize] == 0 || y == textureSize - 1 || dyeRegions[i + textureSize] == 0) {
+				edges.add(new Vec3i(x, y, layer));
+				int dye = layer - 1, c = ++counts[dye];
+				cx[dye] += (x - cx[dye]) / c;
+				cy[dye] += (y - cy[dye]) / c;
+			}
+		}
+		for (int i = 0; i < dyeCenters.length; i++) {
+			dyeCenters[i] = new Vec3d((cx[i] + 0.5) / textureSize, (cy[i] + 0.5) / textureSize, 0);
+		}
+		for (int i = 0; i < area; i++) {
+			if (dyeRegions[i] > 0 || layers[0][i] >>> 24 <= 127) {
+				continue;
+			}
+			int x = i % textureSize, y = i / textureSize;
+			Vec3i closest = null;
+			double dist = Double.POSITIVE_INFINITY;
+			for (Vec3i edge : edges) {
+				if (closest == null) {
+					closest = edge;
+				} else {
+					double d = (edge.getX() - x) * (edge.getX() - x) + (edge.getY() - y) * (edge.getY() - y);
+					if (d < dist) {
+						closest = edge;
+						dist = d;
+					}
+				}
+			}
+			dyeRegions[i] = (byte) closest.getZ();
 		}
 	}
 

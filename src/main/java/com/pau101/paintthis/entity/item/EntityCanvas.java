@@ -183,6 +183,11 @@ public class EntityCanvas extends Entity implements IEntityAdditionalSpawnData {
 	}
 
 	@Override
+	public String getName() {
+		return "item.canvas.name";
+	}
+
+	@Override
 	public void onUpdate() {
 		prevPosX = posX;
 		prevPosY = posY;
