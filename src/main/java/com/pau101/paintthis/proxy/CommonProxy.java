@@ -154,7 +154,7 @@ public class CommonProxy {
 	}
 
 	public void initNetwork() {
-		PaintThis.networkWrapper = NetworkRegistry.INSTANCE.newSimpleChannel(PaintThis.ID);
+		PaintThis.network = NetworkRegistry.INSTANCE.newSimpleChannel(PaintThis.ID);
 		registerMessage(MessagePainterPainting.class, Side.SERVER);
 		registerMessage(MessageSignPainting.class, Side.SERVER);
 		registerMessage(MessagePaletteInteraction.class, Side.SERVER);
@@ -205,7 +205,7 @@ public class CommonProxy {
 	}
 
 	private <M extends PTMessage> void registerMessage(Class<M> messageType, Side toSide) {
-		PaintThis.networkWrapper.registerMessage((m, ctx) -> {
+		PaintThis.network.registerMessage((m, ctx) -> {
 			IThreadListener thread = FMLCommonHandler.instance().getWorldThread(ctx.netHandler);
 			thread.addScheduledTask(() -> m.process(ctx));
 			return null;
@@ -236,4 +236,6 @@ public class CommonProxy {
 	}
 
 	public void paint(EntityPlayer player, ItemStack stack, EnumHand hand) {}
+
+	public void sign(EntityPlayer player, ItemStack stack, EnumHand hand) {}
 }

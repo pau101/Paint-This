@@ -9,8 +9,6 @@ import com.pau101.paintthis.util.Util;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.world.World;
 
@@ -19,28 +17,16 @@ public class ItemPaintbrush extends ItemBrush {
 
 	public ItemPaintbrush(Size size) {
 		this.size = size;
-		setUnlocalizedName("paintbrush." + size.getUnlocalizedName());
+		setUnlocalizedName("paintbrush." + size.unlocalizedName);
 	}
 
 	public int getSize() {
-		return size.getValue();
+		return size.value;
 	}
 
 	@Override
-	public int getMaxItemUseDuration(ItemStack stack) {
-		return stack.getMetadata() > 0 ? 72000 : 0;
-	}
-
-	@Override
-	public ActionResult<ItemStack> onItemRightClick(ItemStack stack, World world, EntityPlayer player, EnumHand hand) {
-		EnumActionResult result;
-		if (world.isRemote) {
-			result = EnumActionResult.FAIL;
-		} else {
-			result = EnumActionResult.SUCCESS;
-			player.setActiveHand(hand);
-		}
-		return new ActionResult<>(result, stack);
+	protected void perform(EntityPlayer player, ItemStack stack, EnumHand hand) {
+		PaintThis.proxy.paint(player, stack, hand);
 	}
 
 	@Override
@@ -75,16 +61,8 @@ public class ItemPaintbrush extends ItemBrush {
 			unlocalizedName = Util.getEnumLowerCamelName(this);
 		}
 
-		public int getValue() {
-			return value;
-		}
-
 		public String getName() {
 			return filename;
-		}
-
-		public String getUnlocalizedName() {
-			return unlocalizedName;
 		}
 	}
 }

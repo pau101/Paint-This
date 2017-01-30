@@ -50,11 +50,14 @@ import com.pau101.paintthis.item.brush.ItemPaintbrush;
 import com.pau101.paintthis.item.crafting.PositionedItemStack;
 import com.pau101.paintthis.net.serverbound.MessagePaletteInteraction;
 import com.pau101.paintthis.net.serverbound.MessagePaletteInteraction.PaletteAction;
+import com.pau101.paintthis.net.serverbound.MessageSignPainting;
 import com.pau101.paintthis.painting.Painting;
 import com.pau101.paintthis.painting.PaintingDrawable;
+import com.pau101.paintthis.painting.Signature;
 import com.pau101.paintthis.util.CubicBezier;
 import com.pau101.paintthis.util.Mth;
 import com.pau101.paintthis.util.OreDictUtil;
+import com.pau101.paintthis.util.Pool;
 import com.pau101.paintthis.util.Util;
 import com.pau101.paintthis.util.matrix.Matrix;
 import com.pau101.paintthis.util.matrix.MatrixStack;
@@ -125,7 +128,7 @@ public class ClientProxy extends CommonProxy {
 
 	private static final ResourceLocation RECIPE_ICONS_TEXTURE = new ResourceLocation(PaintThis.ID, "textures/gui/recipe_icons.png");
 
-	private static final Matrix MATRIX = new Matrix(4);
+	private static final Pool<Matrix> MATRIX_POOL = new Pool<>(() -> new Matrix(4), 4);
 
 	private static final int RECIPE_PAGE_LENGTH = 3;
 
@@ -278,28 +281,42 @@ public class ClientProxy extends CommonProxy {
 		if (getLookingAtSlot(player, opposite) > 0) {
 			return;
 		}
-		Interaction inter = interactions.get(hand);
-		boolean shouldFinish = false;
-		Optional<Pair<EntityCanvas, Vec3d>> result = ItemBrush.findHitCanvas(player);
+		boolean hasClimaxed = true;
+		Optional<Pair<EntityCanvas, Vec3d>> result = findHitCanvas(player);
 		if (result.isPresent()) {
 			Pair<EntityCanvas, Vec3d> hit = result.get();
-			if (!(inter instanceof InteractionBrush)) {
-				inter = new InteractionBrush(stack, player.inventory.currentItem, hand, hit.getRight(), hit.getLeft());
-				interactions.put(hand, inter);
-			}
-			InteractionBrush brush = (InteractionBrush) inter;
-			brush.canvas = hit.getLeft();
-			brush.target = hit.getRight();
-			brush.active = true;
-			if (brush.canPaint()) {
-				Painter painter = player.getCapability(CapabilityHandler.PAINTER_CAP, null);
-				if (hit.getLeft().isEditableBy(player)) {
-					painter.stroke(hit.getLeft(), hand, brush.target, stack);
+			EntityCanvas canvas = hit.getLeft();
+			if (canvas.isEditableBy(player)) {
+				Vec3d vec = hit.getRight();
+				Interaction inter = interactions.get(hand);
+				if (!(inter instanceof InteractionBrush)) {
+					inter = new InteractionBrush(stack, player.inventory.currentItem, hand, vec, canvas, player);
+					interactions.put(hand, inter);
+				}
+				InteractionBrush brush = (InteractionBrush) inter;
+				brush.canvas = canvas;
+				brush.target = vec;
+				brush.active = true;
+				if (brush.canPaint()) {
+					player.getCapability(CapabilityHandler.PAINTER_CAP, null).stroke(canvas, hand, vec, stack);
+					hasClimaxed = false;
 				}
 			}
 		}
-		if (shouldFinish) {
+		if (hasClimaxed) {
 			player.getCapability(CapabilityHandler.PAINTER_CAP, null).finishStroke();	
+		}
+	}
+
+	@Override
+	public void sign(EntityPlayer player, ItemStack stack, EnumHand hand) {
+		Optional<Pair<EntityCanvas, Vec3d>> result = findHitCanvas(player);
+		if (result.isPresent()) {
+			Pair<EntityCanvas, Vec3d> hit = result.get();
+			EntityCanvas canvas = hit.getLeft();
+			if (canvas.isEditableBy(player)) {
+				interactions.put(hand, new InteractionSigningBrush(stack, player.inventory.currentItem, hand, hit.getRight(), canvas));
+			}
 		}
 	}
 
@@ -383,13 +400,14 @@ public class ClientProxy extends CommonProxy {
 			if (offHand != prevOffHand) {
 				lastEquipOffHand = prevOffHand;
 			}
+			EntityPlayer player = mc.thePlayer;
 			Iterator<Entry<EnumHand, Interaction>> inters = interactions.entrySet().iterator();
 			while (inters.hasNext()) {
 				Entry<EnumHand, Interaction> e = inters.next();
 				EnumHand hand = e.getKey();
 				Interaction interaction = e.getValue();
-				interaction.update(hand == EnumHand.OFF_HAND || interaction.actionBarSlot == mc.thePlayer.inventory.currentItem);
-				if (interaction.isDone(mc.thePlayer, hand == EnumHand.MAIN_HAND ? mainHand : offHand)) {
+				interaction.update(player, player.getHeldItem(hand), hand == EnumHand.OFF_HAND || interaction.actionBarSlot == mc.thePlayer.inventory.currentItem);
+				if (interaction.isDone(player, hand == EnumHand.MAIN_HAND ? mainHand : offHand)) {
 					inters.remove();
 				}
 			}
@@ -519,11 +537,57 @@ public class ClientProxy extends CommonProxy {
 		GlStateManager.popMatrix();
 	}
 
+	public static Optional<Pair<EntityCanvas, Vec3d>> findHitCanvas(EntityPlayer player) {
+		List<EntityCanvas> canvases = player.worldObj.getEntitiesWithinAABB(EntityCanvas.class, player.getEntityBoundingBox().expand(ItemBrush.REACH * 2, ItemBrush.REACH * 2, ItemBrush.REACH * 2));
+		Optional<EntityCanvas> hitCanvas = Optional.empty();
+		Optional<Vec3d> hitVec = Optional.of(new Vec3d(-1, -1, ItemBrush.REACH));
+		Vec3d origin = player.getPositionEyes(1);
+		Vec3d look = player.getLookVec();
+		for (EntityCanvas canvas : canvases) {
+			if (player.getDistanceToEntity(canvas) > ItemBrush.REACH * 2) {
+				continue;
+			}
+			Optional<Vec3d> result = findHit(origin, look, canvas);
+			if (result.isPresent() && result.get().zCoord < hitVec.get().zCoord) {
+				hitCanvas = Optional.of(canvas);
+				hitVec = result;
+			}
+		}
+		if (hitCanvas.isPresent()) {
+			return Optional.of(Pair.of(hitCanvas.get(), hitVec.get()));
+		}
+		return Optional.empty();
+	}
+
+	public static Optional<Vec3d> findHit(Vec3d origin, Vec3d look, EntityCanvas canvas) {
+		Matrix matrix = MATRIX_POOL.getInstance();
+		matrix.loadIdentity();
+		matrix.rotate(-canvas.rotationYaw, 0, 1, 0);
+		matrix.rotate((canvas.rotationPitch + 90), 1, 0, 0);
+		float w = canvas.getWidth() / 2F, h = canvas.getHeight() / 2F;
+		Point3f v1 = new Point3f(-w, 0.0625F, -h);
+		Point3f v2 = new Point3f(w, 0.0625F, -h);
+		Point3f v3 = new Point3f(w, 0.0625F, h);
+		Point3f v4 = new Point3f(-w, 0.0625F, h);
+		matrix.transform(v1);
+		matrix.transform(v2);
+		matrix.transform(v3);
+		matrix.transform(v4);
+		MATRIX_POOL.freeInstance(matrix);
+		Point3f pos = new Point3f((float) canvas.posX, (float) canvas.posY, (float) canvas.posZ);
+		v1.add(pos);
+		v2.add(pos);
+		v3.add(pos);
+		v4.add(pos);
+		return Mth.intersect(origin, look, getVec(v1), getVec(v2), getVec(v3), getVec(v4), true);
+	}
+
 	private static void interpolateWorldToHeld(EntityPlayerSP player, ItemStack stack, float yaw, boolean isLeft, boolean isMainHand, ModelViewTransform worldTransform, float t, float regularEquip, float delta) {
-		MATRIX.loadIdentity();
-		MATRIX.mul(getMatrix(GL11.GL_MODELVIEW_MATRIX));
-		worldTransform.transform(MATRIX, player, yaw, isLeft);
-		Matrix4d modelView1 = MATRIX.getTransform();
+		Matrix matrix = MATRIX_POOL.getInstance();
+		matrix.loadIdentity();
+		matrix.mul(getMatrix(GL11.GL_MODELVIEW_MATRIX));
+		worldTransform.transform(matrix, player, yaw, isLeft);
+		Matrix4d modelView1 = matrix.getTransform();
 		Matrix4d perspective1 = getMatrix(GL11.GL_PROJECTION_MATRIX);
 		float fov = 70;
 		Entity entity = mc.getRenderViewEntity();
@@ -551,42 +615,42 @@ public class ClientProxy extends CommonProxy {
 		float swingAmt = MathHelper.sin(thisSwing * thisSwing * Mth.PI);
 		float swingAng = MathHelper.sin(MathHelper.sqrt_float(thisSwing) * Mth.PI);
 		int side = isLeft ? -1 : 1;
-		MATRIX.loadIdentity();
+		matrix.loadIdentity();
 		if (mc.gameSettings.anaglyph) {
-			MATRIX.translate(-(EntityRenderer.anaglyphField * 2 - 1) * 0.07F, 0, 0);
+			matrix.translate(-(EntityRenderer.anaglyphField * 2 - 1) * 0.07F, 0, 0);
 		}
-		MATRIX.perspective(fov, mc.displayWidth / (float) mc.displayHeight, 0.05F, farPlaneDistance * 2);
-		Matrix4d perspective2 = MATRIX.getTransform();
-		MATRIX.loadIdentity();
+		matrix.perspective(fov, mc.displayWidth / (float) mc.displayHeight, 0.05F, farPlaneDistance * 2);
+		Matrix4d perspective2 = matrix.getTransform();
+		matrix.loadIdentity();
 		if (mc.gameSettings.anaglyph) {
-			MATRIX.translate((EntityRenderer.anaglyphField * 2 - 1) * 0.1F, 0, 0);
+			matrix.translate((EntityRenderer.anaglyphField * 2 - 1) * 0.1F, 0, 0);
 		}
-		MATRIX.translate(MathHelper.sin(walked * Mth.PI) * camYaw * 0.5F, -Math.abs(MathHelper.cos(walked * Mth.PI) * camYaw), 0);
-		MATRIX.rotate(MathHelper.sin(walked * Mth.PI) * camYaw * 3, 0, 0, 1);
-		MATRIX.rotate(Math.abs(MathHelper.cos(walked * Mth.PI - 0.2F) * camYaw) * 5 + camPitch, 1, 0, 0);
-		MATRIX.rotate((player.rotationPitch - armPitch) * 0.1F, 1, 0, 0);
-		MATRIX.rotate((player.rotationYaw - armYaw) * 0.1F, 0, 1, 0);
-		MATRIX.translate(side * swingX + side * 0.56F, swingY - 0.52F - regularEquip * 0.6F, swingZ - 0.72F);
-		MATRIX.rotate(side * (45 + swingAmt * -20), 0, 1, 0);
-		MATRIX.rotate(side * swingAng * -20, 0, 0, 1);
-		MATRIX.rotate(swingAng * -80, 1, 0, 0);
-		MATRIX.rotate(side * -45, 0, 1, 0);
+		matrix.translate(MathHelper.sin(walked * Mth.PI) * camYaw * 0.5F, -Math.abs(MathHelper.cos(walked * Mth.PI) * camYaw), 0);
+		matrix.rotate(MathHelper.sin(walked * Mth.PI) * camYaw * 3, 0, 0, 1);
+		matrix.rotate(Math.abs(MathHelper.cos(walked * Mth.PI - 0.2F) * camYaw) * 5 + camPitch, 1, 0, 0);
+		matrix.rotate((player.rotationPitch - armPitch) * 0.1F, 1, 0, 0);
+		matrix.rotate((player.rotationYaw - armYaw) * 0.1F, 0, 1, 0);
+		matrix.translate(side * swingX + side * 0.56F, swingY - 0.52F - regularEquip * 0.6F, swingZ - 0.72F);
+		matrix.rotate(side * (45 + swingAmt * -20), 0, 1, 0);
+		matrix.rotate(side * swingAng * -20, 0, 0, 1);
+		matrix.rotate(swingAng * -80, 1, 0, 0);
+		matrix.rotate(side * -45, 0, 1, 0);
 		IBakedModel model = mc.getRenderItem().getItemModelWithOverrides(stack, mc.theWorld, mc.thePlayer);
 		TransformType transform = isLeft ? TransformType.FIRST_PERSON_LEFT_HAND : TransformType.FIRST_PERSON_RIGHT_HAND;
 		if (model instanceof IPerspectiveAwareModel) {
 			Pair<? extends IBakedModel, Matrix4f> pair = ((IPerspectiveAwareModel) model).handlePerspective(transform);
 			if (pair.getRight() != null) {
-				Matrix4d matrix = new Matrix4d(pair.getRight());
+				Matrix4d mat = new Matrix4d(pair.getRight());
 				if (isLeft) {
-					matrix.mul(FLIP_X, matrix);
-					matrix.mul(matrix, FLIP_X);
+					mat.mul(FLIP_X, mat);
+					mat.mul(mat, FLIP_X);
 				}
-				MATRIX.mul(matrix);
+				matrix.mul(mat);
 			}
 		} else {
 			ItemTransformVec3f vec = model.getItemCameraTransforms().getTransform(transform);
 			if (vec != ItemTransformVec3f.DEFAULT) {
-				MATRIX.translate(side * (ItemCameraTransforms.offsetTranslateX + vec.translation.x), ItemCameraTransforms.offsetTranslateY + vec.translation.y, ItemCameraTransforms.offsetTranslateZ + vec.translation.z);
+				matrix.translate(side * (ItemCameraTransforms.offsetTranslateX + vec.translation.x), ItemCameraTransforms.offsetTranslateY + vec.translation.y, ItemCameraTransforms.offsetTranslateZ + vec.translation.z);
 				float rx = ItemCameraTransforms.offsetRotationX + vec.rotation.x;
 				float ry = ItemCameraTransforms.offsetRotationY + vec.rotation.y;
 				float rz = ItemCameraTransforms.offsetRotationZ + vec.rotation.z;
@@ -594,27 +658,23 @@ public class ClientProxy extends CommonProxy {
 					ry = -ry;
 					rz = -rz;
 				}
-				MATRIX.rotate(makeQuaternion(rx, ry, rz));
-				MATRIX.scale(ItemCameraTransforms.offsetScaleX + vec.scale.x, ItemCameraTransforms.offsetScaleY + vec.scale.y, ItemCameraTransforms.offsetScaleZ + vec.scale.z);
+				matrix.rotate(getQuat(rx, ry, rz));
+				matrix.scale(ItemCameraTransforms.offsetScaleX + vec.scale.x, ItemCameraTransforms.offsetScaleY + vec.scale.y, ItemCameraTransforms.offsetScaleZ + vec.scale.z);
 			}
 		}
-		Matrix4d modelView2 = MATRIX.getTransform();
-		Matrix4d modelView = interpolate(modelView1, modelView2, t);
-		Matrix4d perspective = interpolatePerspective(perspective1, perspective2, t);
+		Matrix4d modelView2 = matrix.getTransform();
+		Matrix4d modelView = lerp(modelView1, modelView2, t);
+		Matrix4d perspective = lerpPerspective(perspective1, perspective2, t);
 		GlStateManager.matrixMode(GL11.GL_PROJECTION);
 		GlStateManager.loadIdentity();
 		multMatrix(perspective);
 		GlStateManager.matrixMode(GL11.GL_MODELVIEW);
 		GlStateManager.loadIdentity();
 		multMatrix(modelView);
+		MATRIX_POOL.freeInstance(matrix);
 	}
 
-	@FunctionalInterface
-	private interface ModelViewTransform {
-		void transform(MatrixStack matrix, EntityPlayerSP player, float yaw, boolean isLeft);
-	}
-
-	private static Quat4d makeQuaternion(float x, float y, float z) {
+	private static Quat4d getQuat(float x, float y, float z) {
 		float rx = x * Mth.DEG_TO_RAD;
 		float ry = y * Mth.DEG_TO_RAD;
 		float rz = z * Mth.DEG_TO_RAD;
@@ -653,7 +713,7 @@ public class ClientProxy extends CommonProxy {
 		GlStateManager.multMatrix(MATRIX_BUF);
 	}
 
-	private static Matrix4d interpolate(Matrix4d a, Matrix4d b, double t) {
+	private static Matrix4d lerp(Matrix4d a, Matrix4d b, double t) {
 		Quat4d aRot = new Quat4d();
 		Quat4d bRot = new Quat4d();
 		a.get(aRot);
@@ -677,7 +737,7 @@ public class ClientProxy extends CommonProxy {
 		return mat;
 	}
 
-	private static Matrix4d interpolatePerspective(Matrix4d a, Matrix4d b, double t) {
+	private static Matrix4d lerpPerspective(Matrix4d a, Matrix4d b, double t) {
 		double aFov = Math.asin(1 / Math.sqrt(a.m11 * a.m11 + 1));
 		double bFov =Math.asin(1 / Math.sqrt(b.m11 * b.m11 + 1));
 		double aAspect =  a.m11 / a.m00;
@@ -731,20 +791,22 @@ public class ClientProxy extends CommonProxy {
 		if (stack != null && canUsePalette(player)) {
 			Vec3d origin = new Vec3d(0, player.getEyeHeight(), 0);
 			Vec3d look = player.getLookVec();
-			MATRIX.loadIdentity();
+			Matrix matrix = MATRIX_POOL.getInstance();
+			matrix.loadIdentity();
 			boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT == (hand == EnumHand.OFF_HAND);
-			transformPalette(MATRIX, player, player.renderYawOffset, isLeft);
-			MATRIX.translate(-0.5, -0.5, -0.5);
+			transformPalette(matrix, player, player.renderYawOffset, isLeft);
+			matrix.translate(-0.5, -0.5, -0.5);
 			float top = isLeft ? 8.5F / 16 : 7.5F / 16;
 			Point3f v1 = new Point3f(0, 1, top);
 			Point3f v2 = new Point3f(1, 1, top);
 			Point3f v3 = new Point3f(1, 0, top);
 			Point3f v4 = new Point3f(0, 0, top);
-			MATRIX.transform(v1);
-			MATRIX.transform(v2);
-			MATRIX.transform(v3);
-			MATRIX.transform(v4);
-			return Mth.intersect(origin, look, asVec3(v1), asVec3(v2), asVec3(v3), asVec3(v4), false);
+			matrix.transform(v1);
+			matrix.transform(v2);
+			matrix.transform(v3);
+			matrix.transform(v4);
+			MATRIX_POOL.freeInstance(matrix);
+			return Mth.intersect(origin, look, getVec(v1), getVec(v2), getVec(v3), getVec(v4), false);
 		}
 		return Optional.empty();
 	}
@@ -754,7 +816,7 @@ public class ClientProxy extends CommonProxy {
 		return ItemPaletteModel.dyeRegions[px + py * ItemPaletteModel.textureSize] - 1;
 	}
 
-	private static Vec3d asVec3(Point3f p) {
+	private static Vec3d getVec(Point3f p) {
 		return new Vec3d(p.x, p.y, p.z);
 	}
 
@@ -763,7 +825,7 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private static boolean canUsePalette(EntityPlayer player) {
-		return ItemPaletteModel.textureSize > -1 && player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator();
+		return player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator() && ItemPaletteModel.textureSize > -1;
 	}
 
 	private static boolean shouldShowRecipes() {
@@ -981,6 +1043,11 @@ public class ClientProxy extends CommonProxy {
 		return ImageIO.read(mc.getResourceManager().getResource(id).getInputStream());
 	}
 
+	@FunctionalInterface
+	private interface ModelViewTransform {
+		void transform(MatrixStack matrix, EntityPlayerSP player, float yaw, boolean isLeft);
+	}
+
 	private static final MatrixStack GL_MATRIX = new MatrixStack() {
 		@Override
 		public void push() {
@@ -1019,12 +1086,12 @@ public class ClientProxy extends CommonProxy {
 	};
 
 	private final class ACompletelyNormalEntity extends Entity {
-		private final EntityPlayerSP player;
+		private final EntityPlayer player;
 
-		public ACompletelyNormalEntity(World world, EntityPlayerSP player) {
+		public ACompletelyNormalEntity(World world, EntityPlayer player) {
 			super(world);
 			this.player = player;
-			setEntityId(-2);
+			setEntityId(-45981); // 1485720303664
 			setSize(0, 0);
 			noClip = true;
 			forceSpawn = true;
@@ -1103,7 +1170,7 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
-	public static class Interaction {
+	private abstract static class Interaction {
 		protected static final int TRANSFORM_DURATION = 6;
 
 		protected final ItemStack used;
@@ -1129,7 +1196,7 @@ public class ClientProxy extends CommonProxy {
 			prevTransformTime = transformTime;
 		}
 
-		public void update(boolean equipped) {
+		public void update(EntityPlayer player, ItemStack stack, boolean equipped) {
 			if (equipped && shouldProgressTransform()) {
 				transformTime++;
 			}
@@ -1157,24 +1224,30 @@ public class ClientProxy extends CommonProxy {
 			return first.getItem() != second.getItem();
 		}
 
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {}
+		public abstract void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta);
 	}
 
-	public static class InteractionBrush extends Interaction {
+	private static class InteractionBrush extends Interaction {
 		private int useTick;
-
-		private Vec3d prevTarget;
 
 		private boolean isDone;
 
 		private boolean active;
 
+		private boolean reachedCanvas;
+
 		private EntityCanvas canvas;
 
-		public InteractionBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, EntityCanvas canvas) {
+		private Vec3d prevTilt;
+
+		private Vec3d tilt;
+
+		private Vec3d targetTilt;
+
+		public InteractionBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, EntityCanvas canvas, EntityPlayer player) {
 			super(used, actionBarSlot, hand, target);
 			this.canvas = canvas;
-			prevTarget = target;
+			prevTilt = tilt = targetTilt = computeTilt(canvas.getLook(1), player.getLook(1));
 		}
 
 		@Override
@@ -1184,7 +1257,7 @@ public class ClientProxy extends CommonProxy {
 
 		@Override
 		protected boolean shouldProgressTransform() {
-			return super.shouldProgressTransform() && active;
+			return super.shouldProgressTransform() && (active || !reachedCanvas);
 		}
 
 		@Override
@@ -1199,15 +1272,33 @@ public class ClientProxy extends CommonProxy {
 		@Override
 		public void updatePrev() {
 			super.updatePrev();
-			prevTarget = target;
+			if (canPaint()) {
+				prevTilt = tilt;	
+			}
 		}
 
 		@Override
-		public void update(boolean equipped) {
+		public void update(EntityPlayer player, ItemStack stack, boolean equipped) {
 			if (equipped && shouldProgressTransform()) {
 				transformTime++;
+				if (transformTime == TRANSFORM_DURATION) {
+					reachedCanvas = true;
+					if (!active) {
+						Painter painter = player.getCapability(CapabilityHandler.PAINTER_CAP, null);
+						if (canvas.isEditableBy(player)) {
+							painter.stroke(canvas, hand, target, stack);
+							painter.finishStroke();
+						}
+					}
+				}
 			}
-			if (!active && transformTime > 0) {
+			if (canPaint() && !tilt.equals(targetTilt)) {
+				tilt = Mth.lerp(tilt, targetTilt, 0.4).normalize();
+				if (tilt.dotProduct(targetTilt) > 0.999) {
+					tilt = targetTilt;
+				}
+			}
+			if (reachedCanvas && !active && transformTime > 0) {
 				transformTime--;
 				if (transformTime == 0) {
 					isDone = true;
@@ -1218,14 +1309,29 @@ public class ClientProxy extends CommonProxy {
 
 		@Override
 		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
-			Vec3d pos = Mth.lerp(prevTarget, target, delta);
 			double px = Mth.lerp(player.lastTickPosX, player.posX, delta);
 			double py = Mth.lerp(player.lastTickPosY, player.posY, delta);
 			double pz = Mth.lerp(player.lastTickPosZ, player.posZ, delta);
 			float yaw = Mth.lerp(canvas.prevRotationYaw, canvas.rotationYaw, delta);
-			float  pitch = Mth.lerp(canvas.prevRotationPitch, canvas.rotationPitch, delta);
+			float pitch = Mth.lerp(canvas.prevRotationPitch, canvas.rotationPitch, delta);
 			Vec3d look = player.getLook(delta);
-			Vec3d normal = canvas.getLook(delta);
+			findHit(player.getPositionEyes(delta), look, canvas).ifPresent(p -> target = p);
+			if (canPaint()) {
+				targetTilt = computeTilt(canvas.getLook(delta), look);
+			}
+			matrix.translate(Mth.lerp(canvas.prevPosX, canvas.posX, delta) - px, Mth.lerp(canvas.prevPosY, canvas.posY, delta) - py, Mth.lerp(canvas.prevPosZ, canvas.posZ, delta) - pz);
+			matrix.rotate(-yaw, 0, 1, 0);
+			matrix.rotate((pitch + 90), 1, 0, 0);
+			matrix.translate(target.xCoord * canvas.getWidth() - canvas.getWidth() / 2D, 1D / 32, target.yCoord * canvas.getHeight() - canvas.getHeight() / 2D);
+			matrix.rotate(-135, 1, 0, 0);
+			matrix.rotate(90, 0, 1, 0);
+			Vec3d ti = canPaint() ? Mth.lerp(prevTilt, tilt, delta) : tilt;
+			matrix.rotate(45, -ti.xCoord, ti.yCoord, -ti.zCoord);
+			matrix.scale(0.5, 0.5, 0.5);
+			matrix.translate(-0.5, -0.5 + 0.0625, 0);
+		}
+
+		private Vec3d computeTilt(Vec3d normal, Vec3d look) {
 			Vec3d posX = new Vec3d(1, 0, 0);
 			// http://math.stackexchange.com/a/476311
 			Vec3d cross = normal.crossProduct(posX);
@@ -1247,64 +1353,25 @@ public class ClientProxy extends CommonProxy {
 			Vec3d ti = normal.crossProduct(look.subtract(normal.scale(2 * look.dotProduct(normal)))).normalize();
 			Vector3d tilt = new Vector3d(ti.xCoord, ti.yCoord, ti.zCoord);
 			transform.transform(tilt);
-			matrix.translate(Mth.lerp(canvas.prevPosX, canvas.posX, delta) - px, Mth.lerp(canvas.prevPosY, canvas.posY, delta) - py, Mth.lerp(canvas.prevPosZ, canvas.posZ, delta) - pz);
-			matrix.rotate(-yaw, 0, 1, 0);
-			matrix.rotate((pitch + 90), 1, 0, 0);
-			matrix.translate(pos.xCoord - canvas.getWidth() / 2D, 1D / 32, pos.yCoord - canvas.getHeight() / 2D);
-			matrix.rotate(-135, 1, 0, 0);
-			matrix.rotate(90, 0, 1, 0);
-			matrix.rotate(45, -tilt.x, tilt.y, -tilt.z);
-			matrix.scale(0.5, 0.5, 0.5);
-			matrix.translate(-0.5, -0.5 + 0.0625, 0);
+			return new Vec3d(tilt.x, tilt.y, tilt.z);
 		}
 	}
 
-	protected static final Vec3d getVectorForRotation(float pitch, float yaw) {
-		float f = MathHelper.cos(-yaw * 0.017453292F - (float) Math.PI);
-		float f1 = MathHelper.sin(-yaw * 0.017453292F - (float) Math.PI);
-		float f2 = -MathHelper.cos(-pitch * 0.017453292F);
-		float f3 = MathHelper.sin(-pitch * 0.017453292F);
-		return new Vec3d((double) (f1 * f2), (double) f3, (double) (f * f2));
-	}
-
-	public static abstract class InteractionPalette extends Interaction {
-		protected final int slot;
-
+	private static abstract class InteractionDurated extends Interaction {
 		protected final int duration;
 
 		protected int prevTick;
 
 		protected int tick;
 
-		public InteractionPalette(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot, int duration) {
+		public InteractionDurated(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int duration) {
 			super(used, actionBarSlot, hand, target);
-			this.slot = slot;
 			this.duration = duration;
 		}
 
-		protected abstract PaletteAction getType();
-
 		protected abstract int getUseTick();
 
-		@Override
-		public void updatePrev() {
-			super.updatePrev();
-			prevTick = tick;
-		}
-
-		@Override
-		public void update(boolean equipped) {
-			super.update(equipped);
-			if (tick < duration && equipped) {
-				if (tick == getUseTick()) {
-					PaintThis.networkWrapper.sendToServer(new MessagePaletteInteraction(getType(), hand, slot));
-				}
-				tick++;
-				if (duration - TRANSFORM_DURATION > TRANSFORM_DURATION && tick >= duration - TRANSFORM_DURATION && transformTime > 0) {
-					transformTime--;
-				}
-			}
-		}
+		protected abstract void use();
 
 		protected float getTick(float delta) {
 			return Mth.lerp(prevTick, tick, delta);
@@ -1321,25 +1388,101 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
+		public void updatePrev() {
+			super.updatePrev();
+			prevTick = tick;
+		}
+
+		@Override
+		public void update(EntityPlayer player, ItemStack stack, boolean equipped) {
+			super.update(player, stack, equipped);
+			if (tick < duration && equipped) {
+				if (tick == getUseTick()) {
+					use();
+				}
+				tick++;
+				if (duration - TRANSFORM_DURATION > TRANSFORM_DURATION && tick >= duration - TRANSFORM_DURATION && transformTime > 0) {
+					transformTime--;
+				}
+			}
+		}
+	}
+
+	private static class InteractionSigningBrush extends InteractionDurated {
+		private final EntityCanvas canvas;
+
+		private final Signature.Side side;
+
+		public InteractionSigningBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, EntityCanvas canvas) {
+			super(used, actionBarSlot, hand, target, 15);
+			this.canvas = canvas;
+			side = Signature.Side.forHit(target);
+		}
+
+		@Override
+		protected int getUseTick() {
+			return 6;
+		}
+
+		@Override
+		protected void use() {
+			PaintThis.network.sendToServer(new MessageSignPainting(canvas, hand, target));
+		}
+
+		@Override
 		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
+			double px = Mth.lerp(player.lastTickPosX, player.posX, delta);
+			double py = Mth.lerp(player.lastTickPosY, player.posY, delta);
+			double pz = Mth.lerp(player.lastTickPosZ, player.posZ, delta);
+			float yaw = Mth.lerp(canvas.prevRotationYaw, canvas.rotationYaw, delta);
+			float pitch = Mth.lerp(canvas.prevRotationPitch, canvas.rotationPitch, delta);
+			matrix.translate(Mth.lerp(canvas.prevPosX, canvas.posX, delta) - px, Mth.lerp(canvas.prevPosY, canvas.posY, delta) - py, Mth.lerp(canvas.prevPosZ, canvas.posZ, delta) - pz);
+			matrix.rotate(-yaw, 0, 1, 0);
+			matrix.rotate((pitch + 90), 1, 0, 0);
+			double dx = side == Signature.Side.LEFT ? -0.15 : canvas.getWidth() - 0.6;
+			matrix.translate((dx + getTick(delta) / duration * 0.7) - canvas.getWidth() / 2D, 1D / 32, canvas.getHeight() - 0.1 - canvas.getHeight() / 2D);
+			matrix.rotate(-135, 1, 0, 0);
+			matrix.rotate(120, 0, 1, 0);
+			matrix.scale(0.5, 0.5, 0.5);
+			matrix.translate(-0.5, -0.5 + 0.0625, 0);
+		}
+	}
+
+	private static abstract class InteractionPalette extends InteractionDurated {
+		protected final int slot;
+
+		public InteractionPalette(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int duration, int slot) {
+			super(used, actionBarSlot, hand, target, duration);
+			this.slot = slot;
+		}
+
+		protected abstract PaletteAction getType();
+
+		protected abstract void transform(EntityPlayer player, MatrixStack matrix, float tick, float delta);
+
+		@Override
+		protected void use() {
+			PaintThis.network.sendToServer(new MessagePaletteInteraction(getType(), hand, slot));
+		}
+
+		@Override
+		public final void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
 			matrix.loadIdentity();
 			matrix.mul(paletteMatrix);
 			if (isRight) {
 				matrix.scale(1, 1, -1);
 			}
 			matrix.translate(target.xCoord, 1 - target.yCoord, 0);
-		}
-
-		protected void endTransform(MatrixStack matrix, boolean isRight) {
+			transform(player, matrix, getTick(delta), delta);
 			if (isRight) {
 				matrix.scale(1, 1, -1);
 			}
 		}
 	}
 
-	public static class InteractionPaletteBrush extends InteractionPalette {
+	private static class InteractionPaletteBrush extends InteractionPalette {
 		public InteractionPaletteBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
-			super(used, actionBarSlot, hand, target, slot, 16);
+			super(used, actionBarSlot, hand, target, 16, slot);
 		}
 
 		@Override
@@ -1353,22 +1496,19 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
-			super.transform(player, matrix, paletteMatrix, isRight, delta);
-			float tick = getTick(delta);
+		public void transform(EntityPlayer player, MatrixStack matrix, float tick, float delta) {
 			float tickSin = (MathHelper.sin(tick * Mth.PI / duration) + 1) / 2;
 			matrix.translate(-0.275, -0.55, (1 - tickSin) * 3 + 0.3);
 			matrix.rotate(180, 0, 0, 1);
 			matrix.rotate(-60, 1, 0, 0);
 			matrix.rotate(40, 0, 1, 0);
 			matrix.scale(0.6, 0.6, 0.6);
-			endTransform(matrix, isRight);
 		}
 	}
 
-	public static class InteractionPaletteKnife extends InteractionPalette {
+	private static class InteractionPaletteKnife extends InteractionPalette {
 		public InteractionPaletteKnife(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
-			super(used, actionBarSlot, hand, target, slot, 20);
+			super(used, actionBarSlot, hand, target, 20, slot);
 		}
 
 		@Override
@@ -1382,9 +1522,7 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
-			super.transform(player, matrix, paletteMatrix, isRight, delta);
-			float tick = getTick(delta);
+		public void transform(EntityPlayer player, MatrixStack matrix, float tick, float delta) {
 			float tickSin = (MathHelper.sin(tick * Mth.PI / duration) + 1) / 2;
 			float laterHalf = Math.max(0, (tick / duration - 0.5F) * 2);
 			matrix.translate(0.2 - tick / duration * 0.8, 0.2 - tick / duration * 1.5, (1 - tickSin) * 2 + laterHalf + 0.1);
@@ -1392,13 +1530,12 @@ public class ClientProxy extends CommonProxy {
 			matrix.rotate(10 - laterHalf * 60, 0, 1, 0);
 			matrix.rotate(laterHalf * 90, 1, 0, 0);
 			matrix.scale(0.6, 0.6, 0.6);
-			endTransform(matrix, isRight);
 		}
 	}
 
-	public static class InteractionPaletteDye extends InteractionPalette {
+	private static class InteractionPaletteDye extends InteractionPalette {
 		public InteractionPaletteDye(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
-			super(used, actionBarSlot, hand, target, slot, 20);
+			super(used, actionBarSlot, hand, target, 20, slot);
 		}
 
 		@Override
@@ -1417,14 +1554,11 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
-			super.transform(player, matrix, paletteMatrix, isRight, delta);
-			float tick = getTick(delta);
+		public void transform(EntityPlayer player, MatrixStack matrix, float tick, float delta) {
 			float tickSin = (MathHelper.sin(tick * Mth.PI / duration) + 1) / 2;
 			matrix.translate(-0.5, -0.5, 0.0375 + (1 - tickSin) * 2);
 			matrix.rotate(tick / duration * 720, 0, 0, 1);
 			matrix.scale(0.3, 0.3, 0.3);
-			endTransform(matrix, isRight);
 		}
 	}
 }

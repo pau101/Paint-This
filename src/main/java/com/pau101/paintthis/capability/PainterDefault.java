@@ -39,7 +39,7 @@ public class PainterDefault implements Painter {
 		}
 		Optional<Painting.Change> change = painting.endAndRemoveChange();
 		if (change.isPresent()) {
-			PaintThis.networkWrapper.sendToServer(new MessagePainterPainting(canvas, hand, change.get()));
+			PaintThis.network.sendToServer(new MessagePainterPainting(canvas, hand, change.get()));
 		}
 		lastStroke = Optional.of(stroke);
 		lastPaintedCanvas = Optional.of(canvas);

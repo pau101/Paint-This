@@ -42,7 +42,7 @@ public class PaintThis {
 	@SidedProxy(clientSide = "com.pau101.paintthis.proxy.ClientProxy", serverSide = "com.pau101.paintthis.proxy.CommonProxy")
 	public static CommonProxy proxy;
 
-	public static SimpleNetworkWrapper networkWrapper;
+	public static SimpleNetworkWrapper network;
 
 	public static CreativeTabs toolsTab;
 
@@ -92,11 +92,11 @@ public class PaintThis {
 		WorldServer world = (WorldServer) entity.worldObj;
 		for (EntityPlayerMP player : (Set<EntityPlayerMP>) world.getEntityTracker().getTrackingPlayers(entity)) {
 			if (!ArrayUtils.contains(exclusions, player)) {
-				networkWrapper.sendTo(message, player);
+				network.sendTo(message, player);
 			}
 		}
 		if (entity instanceof EntityPlayerMP && !ArrayUtils.contains(exclusions, entity)) {
-			networkWrapper.sendTo(message, (EntityPlayerMP) entity);
+			network.sendTo(message, (EntityPlayerMP) entity);
 		}
 	}
 }
