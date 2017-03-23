@@ -376,7 +376,7 @@ public class ClientProxy extends CommonProxy {
 	@SubscribeEvent
 	public void renderSpecificHand(RenderSpecificHandEvent event) {
 		EntityPlayerSP player = mc.thePlayer;
-		if (canUsePalette(player) && shouldShowInteractivePalette(player, event.getHand()) || interactions.containsKey(event.getHand())) {
+		if (shouldShowInteractivePalette(player, event.getHand()) || interactions.containsKey(event.getHand())) {
 			event.setCanceled(true);
 		}
 	}
@@ -418,8 +418,11 @@ public class ClientProxy extends CommonProxy {
 
 	@SubscribeEvent
 	public void onRenderWorldLast(RenderWorldLastEvent event) {
-		ItemRenderer renderer = mc.getItemRenderer();
 		EntityPlayerSP player = mc.thePlayer;
+		if (!canRenderItems(player)) {
+			return;
+		}
+		ItemRenderer renderer = mc.getItemRenderer();
 		float delta = event.getPartialTicks();
 		Matrix4d paletteMatrix = null;
 		if (canUsePalette(player)) {
@@ -820,12 +823,12 @@ public class ClientProxy extends CommonProxy {
 		return new Vec3d(p.x, p.y, p.z);
 	}
 
-	private static boolean canUsePalette() {
-		return canUsePalette(mc.thePlayer);
+	private static boolean canRenderItems(EntityPlayer player) {
+		return player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator();
 	}
 
 	private static boolean canUsePalette(EntityPlayer player) {
-		return player != null && player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0 && !mc.gameSettings.hideGUI && !player.isPlayerSleeping() && !mc.playerController.isSpectator() && ItemPaletteModel.textureSize > -1;
+		return canRenderItems(player) && ItemPaletteModel.textureSize > -1;
 	}
 
 	private static boolean shouldShowRecipes() {

@@ -1,7 +1,7 @@
 package com.pau101.paintthis.util;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Supplier;
 
 public class Pool<T> {
@@ -9,19 +9,19 @@ public class Pool<T> {
 
 	private int size;
 
-	private List<T> instances;
+	private Deque<T> instances;
 
 	public Pool(Supplier<T> instanceProvider, int size) {
 		this.instanceProvider = instanceProvider;
 		this.size = size;
-		instances = new ArrayList<T>();
+		instances = new ConcurrentLinkedDeque();
 	}
 
 	public T getInstance() {
 		if (instances.isEmpty()) {
 			return instanceProvider.get();
 		}
-		return instances.remove(0);
+		return instances.poll();
 	}
 
 	public void freeInstance(T instance) {
