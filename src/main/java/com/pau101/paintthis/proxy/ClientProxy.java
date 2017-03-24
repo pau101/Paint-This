@@ -383,7 +383,8 @@ public class ClientProxy extends CommonProxy {
 
 	@SubscribeEvent
 	public void tick(TickEvent.ClientTickEvent event) {
-		if (Minecraft.getMinecraft().isGamePaused()) {
+		EntityPlayer player = mc.thePlayer;
+		if (mc.isGamePaused() || player == null) {
 			return;
 		}
 		if (event.phase == Phase.START) {
@@ -400,7 +401,7 @@ public class ClientProxy extends CommonProxy {
 			if (offHand != prevOffHand) {
 				lastEquipOffHand = prevOffHand;
 			}
-			EntityPlayer player = mc.thePlayer;
+			updatePaletteInteraction(player);
 			Iterator<Entry<EnumHand, Interaction>> inters = interactions.entrySet().iterator();
 			while (inters.hasNext()) {
 				Entry<EnumHand, Interaction> e = inters.next();
@@ -416,94 +417,74 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
+	private void updatePaletteInteraction(EntityPlayer player) {
+		ItemStack[] mainInv = player.inventory.mainInventory;
+		ItemStack[] offInv = player.inventory.offHandInventory;
+		int mainHandIdx = player.inventory.currentItem;
+		ItemStack mainHand = mainInv[mainHandIdx];
+		ItemStack offHand = offInv[0];
+		updatePaletteInteraction(EnumHand.MAIN_HAND, mainHand, mainInv, 9, offInv, offInv.length, mainHandIdx);
+		updatePaletteInteraction(EnumHand.OFF_HAND, offHand, offInv, offInv.length, mainInv, 9, -1);
+	}
+
+	private void updatePaletteInteraction(EnumHand hand, ItemStack stack, ItemStack[] thisInv, int thisInvSize, ItemStack[] otherInv, int otherInvSize, int slot) {
+		Interaction inter = interactions.get(hand);
+		if (isPalette(stack)) {
+			boolean hasItems = containsPainterUsable(otherInv, otherInvSize) || containsPainterUsable(thisInv, thisInvSize);
+			if (hasItems && !(inter instanceof InteractionPalette)) {
+				interactions.put(hand, new InteractionPalette(stack, slot, hand));
+			}
+			if (inter instanceof InteractionPalette) {
+				((InteractionPalette) inter).hasPainterUsableItems = hasItems;	
+			}
+		}
+	}
+
+	private boolean containsPainterUsable(ItemStack[] stacks, int size) {
+		for (int i = 0; i < size; i++) {
+			ItemStack stack = stacks[i];
+			if (isPaintingItem(stack)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isPalette(ItemStack stack) {
+		return stack != null && stack.getItem() == PaintThis.palette;
+	}
+
+	private boolean isPaintingItem(ItemStack stack) {
+		return stack != null && (stack.getItem() instanceof PainterUsable || OreDictUtil.isDye(stack));
+	}
+
 	@SubscribeEvent
 	public void onRenderWorldLast(RenderWorldLastEvent event) {
 		EntityPlayerSP player = mc.thePlayer;
-		if (!canRenderItems(player)) {
+		if (!canRenderItems(player) || interactions.isEmpty()) {
 			return;
 		}
 		ItemRenderer renderer = mc.getItemRenderer();
 		float delta = event.getPartialTicks();
-		Matrix4d paletteMatrix = null;
-		if (canUsePalette(player)) {
-			if (shouldShowInteractivePalette(player, EnumHand.MAIN_HAND)) {
-				paletteMatrix = renderPalette(player, EnumHand.MAIN_HAND, renderer, delta);
-			} else if (shouldShowInteractivePalette(player, EnumHand.OFF_HAND)) {
-				paletteMatrix = renderPalette(player, EnumHand.OFF_HAND, renderer, delta);
-			}
-		}
-		if (interactions.size() > 0) {
-			mc.entityRenderer.enableLightmap();
-			GlStateManager.enableFog();
-			RenderHelper.enableStandardItemLighting();
-			for (Interaction inter : interactions.values()) {
-				if (!inter.requiresPalette() || paletteMatrix != null) {
-					renderInteraction(player, inter, paletteMatrix, renderer, delta);
-				}
-			}
-			mc.entityRenderer.disableLightmap();
-			GlStateManager.disableFog();
-		}
-	}
-
-	private Matrix4d renderPalette(EntityPlayerSP player, EnumHand hand, ItemRenderer renderer, float delta) {
 		mc.entityRenderer.enableLightmap();
 		GlStateManager.enableFog();
-		// Don't want colors washed out
-		RenderHelper.disableStandardItemLighting();
-		boolean mainHand = hand == EnumHand.MAIN_HAND;
-		ItemStack stack, other, lastEquip;
-		float thisPrevEP, thisEP, otherPrevEP, otherEP;
-		if (mainHand) {
-			stack = renderer.itemStackMainHand;
-			other = renderer.itemStackOffHand;
-			thisPrevEP = renderer.prevEquippedProgressMainHand;
-			thisEP = renderer.equippedProgressMainHand;
-			otherPrevEP = renderer.prevEquippedProgressOffHand;
-			otherEP = renderer.equippedProgressOffHand;
-			lastEquip = lastEquipOffHand;
-		} else {
-			stack = renderer.itemStackOffHand;
-			other = renderer.itemStackMainHand;
-			thisPrevEP = renderer.prevEquippedProgressOffHand;
-			thisEP = renderer.equippedProgressOffHand;
-			otherPrevEP = renderer.prevEquippedProgressMainHand;
-			otherEP = renderer.equippedProgressMainHand;
-			lastEquip = lastEquipMainHand;
-		}
-		float yaw = Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta);
-		boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != mainHand;
-		float pep = thisPrevEP, ep = thisEP;
-		ItemStack usingEquip = stack, heldEquip = player.getHeldItem(hand);
-		ItemStack otherHeldEquip = player.getHeldItem(mainHand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
-		if (thisEP == thisPrevEP && otherEP < 1 && other == otherHeldEquip ? shouldShowInteractivePalette(stack, otherHeldEquip) && !shouldShowInteractivePalette(stack, lastEquip) : !shouldShowInteractivePalette(stack, otherHeldEquip)) {
-			pep = otherPrevEP;
-			ep = otherEP;
-			usingEquip = other;
-			heldEquip = otherHeldEquip;
-		}
-		float equip = 1 - Mth.lerp(pep, ep, delta);
-		GlStateManager.pushMatrix();
-		if (equip == 0) {
-			transformPalette(GL_MATRIX, player, yaw, isLeft);
-		} else {
-			float e;
-			if (equip < 1 && usingEquip != heldEquip) {
-				e = 1 - EQUIP_CURVE.eval(1 - equip);
-			} else {
-				e = EQUIP_CURVE.eval(equip);
+		RenderHelper.enableStandardItemLighting();
+		Matrix4d paletteMatrix = new Matrix4d();
+		for (Interaction inter : interactions.values()) {
+			if (inter instanceof InteractionPalette) {
+				renderInteraction(player, inter, null, paletteMatrix, renderer, delta);
 			}
-			interpolateWorldToHeld(player, stack, yaw, isLeft, mainHand, ClientProxy::transformPalette, e, thisEP == 1 ? 0 : 1, delta);
 		}
-		mc.getRenderItem().renderItem(stack, player, TransformType.NONE, false);
-		Matrix4d mat = getMatrix(GL11.GL_MODELVIEW_MATRIX);
-		GlStateManager.popMatrix();
-		GlStateManager.disableFog();
+		for (Interaction inter : interactions.values()) {
+			if (!(inter instanceof InteractionPalette)) {
+				renderInteraction(player, inter, paletteMatrix, null, renderer, delta);
+			}
+		}
 		mc.entityRenderer.disableLightmap();
-		return mat;
+		GlStateManager.disableFog();
 	}
 
-	private void renderInteraction(EntityPlayerSP player, Interaction interaction, Matrix4d paletteMatrix, ItemRenderer renderer, float delta) {
+	private void renderInteraction(EntityPlayerSP player, Interaction interaction, Matrix4d paletteMatrix, Matrix4d outputMatrix, ItemRenderer renderer, float delta) {
 		GlStateManager.pushMatrix();
 		boolean mainHand = interaction.hand == EnumHand.MAIN_HAND;
 		boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != mainHand;
@@ -537,6 +518,9 @@ public class ClientProxy extends CommonProxy {
 			interpolateWorldToHeld(player, stack, yaw, isLeft, mainHand, (m, p, y, l) -> interaction.transform(player, m, paletteMatrix, l, delta), equip, renderEquip, delta);
 		}
 		mc.getRenderItem().renderItem(stack, player, TransformType.NONE, false);
+		if (outputMatrix != null) {
+			outputMatrix.set(getMatrix(GL11.GL_MODELVIEW_MATRIX));
+		}
 		GlStateManager.popMatrix();
 	}
 
@@ -1182,17 +1166,14 @@ public class ClientProxy extends CommonProxy {
 
 		protected final EnumHand hand;
 
-		protected Vec3d target;
-
 		protected int transformTime;
 
 		protected int prevTransformTime;
 
-		public Interaction(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target) {
+		public Interaction(ItemStack used, int actionBarSlot, EnumHand hand) {
 			this.used = used;
 			this.actionBarSlot = hand == EnumHand.OFF_HAND ? -1 : actionBarSlot;
 			this.hand = hand;
-			this.target = target;
 		}
 
 		public void updatePrev() {
@@ -1214,13 +1195,7 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		public boolean isDone(EntityPlayer player, ItemStack stack) {
-			if (stack == null) {
-				return true;
-			}
-			if (hand == EnumHand.MAIN_HAND) {
-				return player.inventory.currentItem != actionBarSlot && isDifferentItem(used, stack);
-			}
-			return isDifferentItem(used, stack);
+			return stack == null || isDifferentItem(used, stack);
 		}
 
 		protected boolean isDifferentItem(ItemStack first, ItemStack second) {
@@ -1231,6 +1206,8 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private static class InteractionBrush extends Interaction {
+		private Vec3d target;
+
 		private int useTick;
 
 		private boolean isDone;
@@ -1248,7 +1225,8 @@ public class ClientProxy extends CommonProxy {
 		private Vec3d targetTilt;
 
 		public InteractionBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, EntityCanvas canvas, EntityPlayer player) {
-			super(used, actionBarSlot, hand, target);
+			super(used, actionBarSlot, hand);
+			this.target = target;
 			this.canvas = canvas;
 			prevTilt = tilt = targetTilt = computeTilt(canvas.getLook(1), player.getLook(1));
 		}
@@ -1360,6 +1338,42 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
+	private static class InteractionPalette extends Interaction {
+		public boolean hasPainterUsableItems = true;
+
+		private boolean isDone;
+
+		public InteractionPalette(ItemStack used, int actionBarSlot, EnumHand hand) {
+			super(used, actionBarSlot, hand);
+		}
+
+		@Override
+		public void update(EntityPlayer player, ItemStack stack, boolean equipped) {
+			if (equipped) {
+				if (hasPainterUsableItems) {
+					if (shouldProgressTransform()) {
+						transformTime++;	
+					}
+				} else if (transformTime > 0) {
+					transformTime--;
+					if (transformTime == 0) {
+						isDone = true;
+					}
+				}
+			}
+		}
+
+		@Override
+		public boolean isDone(EntityPlayer player, ItemStack stack) {
+			return super.isDone(player, stack) || isDone;
+		}
+
+		@Override
+		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
+			transformPalette(matrix, player, Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta), isRight);
+		}
+	}
+
 	private static abstract class InteractionDurated extends Interaction {
 		protected final int duration;
 
@@ -1367,8 +1381,8 @@ public class ClientProxy extends CommonProxy {
 
 		protected int tick;
 
-		public InteractionDurated(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int duration) {
-			super(used, actionBarSlot, hand, target);
+		public InteractionDurated(ItemStack used, int actionBarSlot, EnumHand hand, int duration) {
+			super(used, actionBarSlot, hand);
 			this.duration = duration;
 		}
 
@@ -1412,12 +1426,15 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private static class InteractionSigningBrush extends InteractionDurated {
+		private final Vec3d target;
+
 		private final EntityCanvas canvas;
 
 		private final Signature.Side side;
 
 		public InteractionSigningBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, EntityCanvas canvas) {
-			super(used, actionBarSlot, hand, target, 15);
+			super(used, actionBarSlot, hand, 15);
+			this.target = target;
 			this.canvas = canvas;
 			side = Signature.Side.forHit(target);
 		}
@@ -1451,11 +1468,14 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
-	private static abstract class InteractionPalette extends InteractionDurated {
+	private static abstract class InteractionOnPalette extends InteractionDurated {
+		protected final Vec3d target;
+
 		protected final int slot;
 
-		public InteractionPalette(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int duration, int slot) {
-			super(used, actionBarSlot, hand, target, duration);
+		public InteractionOnPalette(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int duration, int slot) {
+			super(used, actionBarSlot, hand, duration);
+			this.target = target;
 			this.slot = slot;
 		}
 
@@ -1483,7 +1503,7 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
-	private static class InteractionPaletteBrush extends InteractionPalette {
+	private static class InteractionPaletteBrush extends InteractionOnPalette {
 		public InteractionPaletteBrush(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
 			super(used, actionBarSlot, hand, target, 16, slot);
 		}
@@ -1509,7 +1529,7 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
-	private static class InteractionPaletteKnife extends InteractionPalette {
+	private static class InteractionPaletteKnife extends InteractionOnPalette {
 		public InteractionPaletteKnife(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
 			super(used, actionBarSlot, hand, target, 20, slot);
 		}
@@ -1536,7 +1556,7 @@ public class ClientProxy extends CommonProxy {
 		}
 	}
 
-	private static class InteractionPaletteDye extends InteractionPalette {
+	private static class InteractionPaletteDye extends InteractionOnPalette {
 		public InteractionPaletteDye(ItemStack used, int actionBarSlot, EnumHand hand, Vec3d target, int slot) {
 			super(used, actionBarSlot, hand, target, 20, slot);
 		}
