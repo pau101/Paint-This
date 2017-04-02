@@ -428,8 +428,8 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private void updatePaletteInteraction(EnumHand hand, ItemStack stack, ItemStack[] thisInv, int thisInvSize, ItemStack[] otherInv, int otherInvSize, int slot) {
-		Interaction inter = interactions.get(hand);
 		if (isPalette(stack)) {
+			Interaction inter = interactions.get(hand);
 			boolean hasItems = containsPainterUsable(otherInv, otherInvSize) || containsPainterUsable(thisInv, thisInvSize);
 			if (hasItems && !(inter instanceof InteractionPalette)) {
 				interactions.put(hand, new InteractionPalette(stack, slot, hand));
@@ -470,6 +470,7 @@ public class ClientProxy extends CommonProxy {
 		GlStateManager.enableFog();
 		RenderHelper.enableStandardItemLighting();
 		Matrix4d paletteMatrix = new Matrix4d();
+		paletteMatrix.setIdentity();
 		for (Interaction inter : interactions.values()) {
 			if (inter instanceof InteractionPalette) {
 				renderInteraction(player, inter, null, paletteMatrix, renderer, delta);
@@ -485,7 +486,6 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private void renderInteraction(EntityPlayerSP player, Interaction interaction, Matrix4d paletteMatrix, Matrix4d outputMatrix, ItemRenderer renderer, float delta) {
-		GlStateManager.pushMatrix();
 		boolean mainHand = interaction.hand == EnumHand.MAIN_HAND;
 		boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != mainHand;
 		ItemStack stack;
@@ -511,9 +511,13 @@ public class ClientProxy extends CommonProxy {
 		} else {
 			equip = EQUIP_CURVE.eval(equip);
 		}
+		GlStateManager.pushMatrix();
 		if (equip == 0) {
 			interaction.transform(player, GL_MATRIX, paletteMatrix, isLeft, delta);
 		} else {
+			GlStateManager.matrixMode(GL11.GL_PROJECTION);
+			GlStateManager.pushMatrix();
+			GlStateManager.matrixMode(GL11.GL_MODELVIEW);
 			float yaw = Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta);
 			interpolateWorldToHeld(player, stack, yaw, isLeft, mainHand, (m, p, y, l) -> interaction.transform(player, m, paletteMatrix, l, delta), equip, renderEquip, delta);
 		}
@@ -522,6 +526,11 @@ public class ClientProxy extends CommonProxy {
 			outputMatrix.set(getMatrix(GL11.GL_MODELVIEW_MATRIX));
 		}
 		GlStateManager.popMatrix();
+		if (equip != 0) {
+			GlStateManager.matrixMode(GL11.GL_PROJECTION);
+			GlStateManager.popMatrix();
+			GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+		}
 	}
 
 	public static Optional<Pair<EntityCanvas, Vec3d>> findHitCanvas(EntityPlayer player) {
@@ -1202,7 +1211,7 @@ public class ClientProxy extends CommonProxy {
 			return first.getItem() != second.getItem();
 		}
 
-		public abstract void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta);
+		public abstract void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta);
 	}
 
 	private static class InteractionBrush extends Interaction {
@@ -1289,7 +1298,7 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
+		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta) {
 			double px = Mth.lerp(player.lastTickPosX, player.posX, delta);
 			double py = Mth.lerp(player.lastTickPosY, player.posY, delta);
 			double pz = Mth.lerp(player.lastTickPosZ, player.posZ, delta);
@@ -1369,8 +1378,8 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
-			transformPalette(matrix, player, Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta), isRight);
+		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta) {
+			transformPalette(matrix, player, Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta), isLeft);
 		}
 	}
 
@@ -1450,7 +1459,7 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
+		public void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta) {
 			double px = Mth.lerp(player.lastTickPosX, player.posX, delta);
 			double py = Mth.lerp(player.lastTickPosY, player.posY, delta);
 			double pz = Mth.lerp(player.lastTickPosZ, player.posZ, delta);
@@ -1489,15 +1498,15 @@ public class ClientProxy extends CommonProxy {
 		}
 
 		@Override
-		public final void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isRight, float delta) {
+		public final void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta) {
 			matrix.loadIdentity();
 			matrix.mul(paletteMatrix);
-			if (isRight) {
+			if (isLeft) {
 				matrix.scale(1, 1, -1);
 			}
 			matrix.translate(target.xCoord, 1 - target.yCoord, 0);
 			transform(player, matrix, getTick(delta), delta);
-			if (isRight) {
+			if (isLeft) {
 				matrix.scale(1, 1, -1);
 			}
 		}
