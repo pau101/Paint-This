@@ -1,6 +1,7 @@
 package com.pau101.paintthis.server.asm;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -107,6 +108,9 @@ public final class PaintThisClassTransformer implements IClassTransformer {
 
 			@Override
 			public AbstractInsnNode next() {
+				if (!hasNext()) {
+					throw new NoSuchElementException();
+				}
 				return insns.get(i++);
 			}
 		};
