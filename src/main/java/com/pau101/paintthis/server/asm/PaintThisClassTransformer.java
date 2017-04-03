@@ -16,7 +16,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 import net.minecraft.launchwrapper.IClassTransformer;
 
 public final class PaintThisClassTransformer implements IClassTransformer {
-	private static final String CLIENT_PROXY = "com/pau101/paintthis/proxy/ClientProxy";
+	private static final String CLIENT_PROXY = "com/pau101/paintthis/client/ClientProxy";
 
 	@Override
 	public byte[] transform(String name, String transformedName, byte[] bytes) {

@@ -12,7 +12,7 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.TransformerExclusions
 
 @Name(PaintThis.NAME)
 @MCVersion(MinecraftForge.MC_VERSION)
-@TransformerExclusions({ "com.pau101.paintthis.asm" })
+@TransformerExclusions({ "com.pau101.paintthis.server.asm." })
 public final class PaintThisLoadingPlugin implements IFMLLoadingPlugin {
 	@Override
 	public String[] getASMTransformerClass() {
