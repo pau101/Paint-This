@@ -486,11 +486,11 @@ public class ClientProxy extends CommonProxy {
 	}
 
 	private void renderInteraction(EntityPlayerSP player, Interaction interaction, Matrix4d paletteMatrix, Matrix4d outputMatrix, ItemRenderer renderer, float delta) {
-		boolean mainHand = interaction.hand == EnumHand.MAIN_HAND;
-		boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != mainHand;
+		boolean isMainHand = interaction.hand == EnumHand.MAIN_HAND;
+		boolean isLeft = player.getPrimaryHand() == EnumHandSide.RIGHT != isMainHand;
 		ItemStack stack;
 		float pep, ep;
-		if (mainHand) {
+		if (isMainHand) {
 			stack = renderer.itemStackMainHand;
 			pep = renderer.prevEquippedProgressMainHand;
 			ep = renderer.equippedProgressMainHand;
@@ -500,13 +500,10 @@ public class ClientProxy extends CommonProxy {
 			ep = renderer.equippedProgressOffHand;
 		}
 		float equip = 1 - Mth.lerp(pep, ep, delta);
-		ItemStack heldEquip = player.getHeldItem(interaction.hand);
-		float renderEquip = ep == 1 ? 0 : 1;
-		if (interaction.hand == EnumHand.OFF_HAND || player.inventory.currentItem == interaction.actionBarSlot) {
-			renderEquip = 0;
+		if (stack == player.getHeldItem(interaction.hand)) {
 			equip = 1 - Mth.lerp(interaction.prevTransformTime, interaction.transformTime, delta) / Interaction.TRANSFORM_DURATION;
 			equip = TRANSFORM_CURVE.eval(equip);
-		} else if (equip < 1 && stack != heldEquip) {
+		} else if (equip < 1) {
 			equip = 1 - EQUIP_CURVE.eval(1 - equip);
 		} else {
 			equip = EQUIP_CURVE.eval(equip);
@@ -519,7 +516,8 @@ public class ClientProxy extends CommonProxy {
 			GlStateManager.pushMatrix();
 			GlStateManager.matrixMode(GL11.GL_MODELVIEW);
 			float yaw = Mth.lerp(player.prevRenderYawOffset, player.renderYawOffset, delta);
-			interpolateWorldToHeld(player, stack, yaw, isLeft, mainHand, (m, p, y, l) -> interaction.transform(player, m, paletteMatrix, l, delta), equip, renderEquip, delta);
+			float renderEquip = ep == 1 ? 0 : 1;
+			interpolateWorldToHeld(player, stack, yaw, isLeft, isMainHand, (m, p, y, l) -> interaction.transform(player, m, paletteMatrix, l, delta), equip, renderEquip, delta);
 		}
 		mc.getRenderItem().renderItem(stack, player, TransformType.NONE, false);
 		if (outputMatrix != null) {
