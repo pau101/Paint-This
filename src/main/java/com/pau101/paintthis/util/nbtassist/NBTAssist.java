@@ -71,7 +71,7 @@ public final class NBTAssist {
 		try {
 			value = field.get(object);
 		} catch (Exception e) {
-			throw new NBTAssistAccessError(e);
+			throw new NBTAssistAccessException(e);
 		}
 		return writeToNBT(field.getType(), value);
 	}
@@ -81,7 +81,7 @@ public final class NBTAssist {
 		try {
 			value = getter.invoke(object);
 		} catch (Exception e) {
-			throw new NBTAssistAccessError(e);
+			throw new NBTAssistAccessException(e);
 		}
 		return writeToNBT(getter.getReturnType(), value);
 	}
@@ -306,7 +306,7 @@ public final class NBTAssist {
 		try {
 			field.set(object, value);
 		} catch (Exception e) {
-			throw new NBTAssistAccessError(e);
+			throw new NBTAssistAccessException(e);
 		}
 	}
 
@@ -319,7 +319,7 @@ public final class NBTAssist {
 		try {
 			setter.invoke(object, value);
 		} catch (Exception e) {
-			throw new NBTAssistAccessError(e);
+			throw new NBTAssistAccessException(e);
 		}
 	}
 
@@ -460,7 +460,7 @@ public final class NBTAssist {
 			try {
 				list = (List<Object>) (type == List.class ? ArrayList.class : type).newInstance();
 			} catch (Exception e) {
-				throw new NBTAssistObjectInstantiationError(e);
+				throw new NBTAssistObjectInstantiationException(e);
 			}
 			for (int i = 0; i < valueList.tagCount(); i++) {
 				Object e = readFromNBT((Class<?>) ((ParameterizedType) parameterizedType).getActualTypeArguments()[0], null, valueList.get(i));
@@ -476,7 +476,7 @@ public final class NBTAssist {
 			try {
 				map = (Map<Object, Object>) (type == Map.class ? HashMap.class : type).newInstance();
 			} catch (Exception e) {
-				throw new NBTAssistObjectInstantiationError(e);
+				throw new NBTAssistObjectInstantiationException(e);
 			}
 			for (int i = 0; i < valueCompound.tagCount(); i++) {
 				NBTTagCompound entryCompound = valueCompound.getCompoundTagAt(i);
@@ -517,7 +517,7 @@ public final class NBTAssist {
 					objValue = constructor.newInstance();
 				}
 			} catch (Exception e) {
-				throw new NBTAssistObjectInstantiationError(e);
+				throw new NBTAssistObjectInstantiationException(e);
 			}
 			read(objValue, (NBTTagCompound) tag);
 			return objValue;
@@ -552,7 +552,7 @@ public final class NBTAssist {
 			message.append('(');
 			message.append(param.length == 0 ? "" : param[0] == null ? "null" : param[0].getName());
 			message.append(')');
-			throw new NBTAssitNoSuchMutatorError(message.toString());
+			throw new NBTAssistNoSuchMutatorException(message.toString());
 		}
 		method.setAccessible(true);
 		return method;
