@@ -3,10 +3,10 @@ package com.pau101.paintthis.client.renderer.entity;
 import org.lwjgl.opengl.GL11;
 
 import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.painting.PaintingDrawable;
-import com.pau101.paintthis.painting.Signature;
-import com.pau101.paintthis.painting.Signature.Side;
+import com.pau101.paintthis.server.entity.item.EntityCanvas;
+import com.pau101.paintthis.server.painting.PaintingDrawable;
+import com.pau101.paintthis.server.painting.Signature;
+import com.pau101.paintthis.server.painting.Signature.Side;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.util.ResourceLocation;
 
-public class RenderCanvas extends Render<EntityCanvas> {
+public final class RenderCanvas extends Render<EntityCanvas> {
 	public static final ResourceLocation TEXTURE = new ResourceLocation(PaintThis.ID, "textures/entity/canvas.png");
 
 	public static final int TILE_SIZE = 8;

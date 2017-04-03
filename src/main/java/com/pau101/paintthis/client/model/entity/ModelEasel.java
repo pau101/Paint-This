@@ -1,17 +1,17 @@
 package com.pau101.paintthis.client.model.entity;
 
+import com.pau101.paintthis.server.entity.item.EntityCanvas;
+import com.pau101.paintthis.server.entity.item.EntityEasel;
+import com.pau101.paintthis.server.painting.Painting;
+
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.entity.Entity;
 
-import com.pau101.paintthis.entity.item.EntityCanvas;
-import com.pau101.paintthis.entity.item.EntityEasel;
-import com.pau101.paintthis.painting.Painting;
+public final class ModelEasel extends ModelBase {
+	private final ModelRenderer tower;
 
-public class ModelEasel extends ModelBase {
-	private ModelRenderer tower;
-
-	private ModelRenderer lock;
+	private final ModelRenderer lock;
 
 	public ModelEasel() {
 		textureWidth = 64;

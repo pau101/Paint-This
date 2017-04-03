@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.item.ItemPalette;
+import com.pau101.paintthis.server.item.ItemPalette;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -41,7 +41,7 @@ import net.minecraftforge.common.model.IModelPart;
 import net.minecraftforge.common.model.IModelState;
 import net.minecraftforge.common.model.TRSRTransformation;
 
-public class ItemPaletteModel implements IModel {
+public final class ItemPaletteModel implements IModel {
 	public static byte[] dyeRegions;
 
 	public static Vec3d[] dyeCenters;

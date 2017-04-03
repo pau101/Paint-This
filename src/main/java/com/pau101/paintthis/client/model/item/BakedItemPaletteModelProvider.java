@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.pau101.paintthis.dye.Dye;
+import com.pau101.paintthis.server.dye.Dye;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -21,7 +21,7 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.world.World;
 import net.minecraftforge.common.model.TRSRTransformation;
 
-public class BakedItemPaletteModelProvider implements IBakedModel {
+public final class BakedItemPaletteModelProvider implements IBakedModel {
 	private final ItemOverrideList override = new Provider();
 
 	private final BakedItemPaletteModel[] models = new BakedItemPaletteModel[256];
@@ -76,7 +76,7 @@ public class BakedItemPaletteModelProvider implements IBakedModel {
 		return override;
 	}
 
-	private class Provider extends ItemOverrideList {
+	private final class Provider extends ItemOverrideList {
 		public Provider() {
 			super(Collections.EMPTY_LIST);
 		}

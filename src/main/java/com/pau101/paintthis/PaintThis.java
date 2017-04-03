@@ -5,10 +5,9 @@ import java.util.Set;
 import org.apache.commons.lang3.ArrayUtils;
 
 import com.google.common.collect.ImmutableMap;
-import com.pau101.paintthis.item.brush.ItemBrush;
-import com.pau101.paintthis.item.brush.ItemPaintbrush;
-import com.pau101.paintthis.proxy.CommonProxy;
-import com.pau101.paintthis.sound.PTSounds;
+import com.pau101.paintthis.server.ServerProxy;
+import com.pau101.paintthis.server.item.brush.ItemBrush;
+import com.pau101.paintthis.server.item.brush.ItemPaintbrush;
 
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
@@ -25,7 +24,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 
 @Mod(modid = PaintThis.ID, name = PaintThis.NAME, version = PaintThis.VERSION)
-public class PaintThis {
+public final class PaintThis {
 	public static final String ID = "paintthis";
 
 	public static final String NAME = "Paint This!";
@@ -40,7 +39,7 @@ public class PaintThis {
 	public static PaintThis instance;
 
 	@SidedProxy(clientSide = "com.pau101.paintthis.proxy.ClientProxy", serverSide = "com.pau101.paintthis.proxy.CommonProxy")
-	public static CommonProxy proxy;
+	public static ServerProxy proxy;
 
 	public static SimpleNetworkWrapper network;
 

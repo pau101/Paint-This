@@ -1,18 +1,18 @@
 package com.pau101.paintthis.client.renderer.entity;
 
+import com.pau101.paintthis.PaintThis;
+import com.pau101.paintthis.client.model.entity.ModelEasel;
+import com.pau101.paintthis.server.entity.item.EntityEasel;
+
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.util.ResourceLocation;
 
-import com.pau101.paintthis.PaintThis;
-import com.pau101.paintthis.client.model.entity.ModelEasel;
-import com.pau101.paintthis.entity.item.EntityEasel;
-
-public class RenderEasel extends Render<EntityEasel> {
+public final class RenderEasel extends Render<EntityEasel> {
 	private static final ResourceLocation TEXTURE = new ResourceLocation(PaintThis.ID, "textures/entity/easel.png");
 
-	private ModelEasel model = new ModelEasel();
+	private final ModelEasel model = new ModelEasel();
 
 	public RenderEasel(RenderManager manager) {
 		super(manager);

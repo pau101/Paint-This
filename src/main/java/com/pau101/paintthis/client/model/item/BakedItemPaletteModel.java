@@ -21,7 +21,7 @@ import net.minecraft.util.EnumFacing;
 import net.minecraftforge.client.model.IPerspectiveAwareModel;
 import net.minecraftforge.common.model.TRSRTransformation;
 
-public class BakedItemPaletteModel implements IBakedModel, IPerspectiveAwareModel {
+public final class BakedItemPaletteModel implements IBakedModel, IPerspectiveAwareModel {
 	private final ImmutableList<BakedQuad> quads;
 
 	private final TextureAtlasSprite particle;
