@@ -273,7 +273,7 @@ public final class ClientProxy extends ServerProxy {
 
 	@Override
 	public boolean isClientPainting(EntityPlayer player) {
-		return player.worldObj.isRemote && player == mc.thePlayer;
+		return player instanceof EntityPlayerSP;
 	}
 
 	@Override
