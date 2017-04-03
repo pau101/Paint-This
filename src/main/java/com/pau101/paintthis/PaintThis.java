@@ -38,7 +38,7 @@ public final class PaintThis {
 	@Instance(ID)
 	public static PaintThis instance;
 
-	@SidedProxy(clientSide = "com.pau101.paintthis.proxy.ClientProxy", serverSide = "com.pau101.paintthis.proxy.CommonProxy")
+	@SidedProxy(clientSide = "com.pau101.paintthis.client.ClientProxy", serverSide = "com.pau101.paintthis.server.ServerProxy")
 	public static ServerProxy proxy;
 
 	public static SimpleNetworkWrapper network;
