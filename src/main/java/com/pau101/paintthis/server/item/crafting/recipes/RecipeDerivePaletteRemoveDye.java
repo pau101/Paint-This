@@ -9,6 +9,7 @@ import com.pau101.paintthis.server.item.ItemPalette;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.common.ForgeHooks;
 
 public final class RecipeDerivePaletteRemoveDye extends RecipeDerivePalette {
 	private static final Random RANDOM = new Random();
@@ -51,8 +52,11 @@ public final class RecipeDerivePaletteRemoveDye extends RecipeDerivePalette {
 				Item item = stack.getItem();
 				if (item == PaintThis.palette) {
 					stack = replacementPalette;
-				} else if (item == PaintThis.paletteKnife && stack.attemptDamageItem(1, RANDOM)) {
-					stack = null;
+				} else if (item == PaintThis.paletteKnife) {
+					stack = stack.copy();
+					stack.attemptDamageItem(1, RANDOM);
+				} else {
+					stack = ForgeHooks.getContainerItem(stack);
 				}
 			}
 			remaining[i] = stack;
