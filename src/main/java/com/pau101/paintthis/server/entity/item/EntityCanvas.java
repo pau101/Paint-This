@@ -34,6 +34,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
@@ -185,6 +186,12 @@ public final class EntityCanvas extends Entity implements IEntityAdditionalSpawn
 	@Override
 	public String getName() {
 		return "item.canvas.name";
+	}
+
+	@Override
+	public ItemStack getPickedResult(RayTraceResult target) {
+		ItemStack stack = getItem();
+		return stack == null ? null : stack.copy();
 	}
 
 	@Override

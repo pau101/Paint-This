@@ -23,6 +23,7 @@ import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
@@ -79,6 +80,11 @@ public final class EntityEasel extends EntityLivingBase implements IEntityAdditi
 	@Override
 	public String getName() {
 		return "item.easel.name";
+	}
+
+	@Override
+	public ItemStack getPickedResult(RayTraceResult target) {
+		return new ItemStack(PaintThis.easel);
 	}
 
 	@Override

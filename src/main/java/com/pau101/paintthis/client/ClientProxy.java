@@ -77,6 +77,7 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.GlStateManager.DestFactor;
 import net.minecraft.client.renderer.GlStateManager.SourceFactor;
 import net.minecraft.client.renderer.ItemRenderer;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.RenderItem;
 import net.minecraft.client.renderer.block.model.IBakedModel;
@@ -470,6 +471,7 @@ public final class ClientProxy extends ServerProxy {
 		mc.entityRenderer.enableLightmap();
 		GlStateManager.enableFog();
 		RenderHelper.enableStandardItemLighting();
+		OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240, 240);
 		Matrix4d paletteMatrix = new Matrix4d();
 		paletteMatrix.setIdentity();
 		for (Interaction inter : interactions.values()) {
@@ -501,7 +503,7 @@ public final class ClientProxy extends ServerProxy {
 			ep = renderer.equippedProgressOffHand;
 		}
 		float equip = 1 - Mth.lerp(pep, ep, delta);
-		if (stack == player.getHeldItem(interaction.hand)) {
+		if (!interaction.isDifferentItem(stack, player.getHeldItem(interaction.hand))) {
 			equip = 1 - Mth.lerp(interaction.prevTransformTime, interaction.transformTime, delta) / Interaction.TRANSFORM_DURATION;
 			equip = TRANSFORM_CURVE.eval(equip);
 		} else if (equip < 1) {
@@ -1203,11 +1205,11 @@ public final class ClientProxy extends ServerProxy {
 		}
 
 		public boolean isDone(EntityPlayer player, ItemStack stack) {
-			return stack == null || isDifferentItem(used, stack);
+			return isDifferentItem(used, stack);
 		}
 
-		protected boolean isDifferentItem(ItemStack first, ItemStack second) {
-			return first.getItem() != second.getItem();
+		public boolean isDifferentItem(ItemStack first, ItemStack second) {
+			return (first == null) != (second == null) || first != null && second != null && first.getItem() != second.getItem();
 		}
 
 		public abstract void transform(EntityPlayer player, MatrixStack matrix, Matrix4d paletteMatrix, boolean isLeft, float delta);
@@ -1580,7 +1582,7 @@ public final class ClientProxy extends ServerProxy {
 		}
 
 		@Override
-		protected boolean isDifferentItem(ItemStack first, ItemStack second) {
+		public boolean isDifferentItem(ItemStack first, ItemStack second) {
 			return super.isDifferentItem(first, second) || first.getMetadata() != second.getMetadata();
 		}
 
